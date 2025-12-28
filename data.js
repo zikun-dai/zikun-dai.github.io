@@ -1,310 +1,37 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>博物馆生存指南 V11.0 (温情职场版)</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
-
-        :root {
-            --bg-color: #e3f2fd; 
-            --panel-bg: #ffffff;
-            --primary: #1e88e5; 
-            --primary-light: #bbdefb;
-            --accent: #f48fb1; 
-            --accent-light: #fce4ec;
-            --text-main: #37474f;
-            --text-sub: #78909c;
-            --border-radius: 16px;
-            --shadow: 0 4px 20px rgba(25, 118, 210, 0.08);
-            --danger: #e57373;
-            --success: #81c784;
-            --warning: #ffb74d;
-        }
-
-        * { box-sizing: border-box; font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif; }
-
-        body {
-            background-color: var(--bg-color); color: var(--text-main);
-            margin: 0; height: 100vh; overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        /* === 全屏像素开屏 === */
-        #start-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background-color: #1a237e;
-            background-image: 
-                linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)),
-                conic-gradient(from 0deg at 50% 50%, #283593 0%, #1a237e 25%, #303f9f 50%, #1a237e 75%, #283593 100%);
-            background-size: 40px 40px;
-        }
-        
-        .pixel-museum {
-            font-size: 150px; margin-bottom: 20px;
-            filter: drop-shadow(5px 5px 0px #000);
-            animation: float 3s ease-in-out infinite;
-        }
-        @keyframes float { 0%{transform:translateY(0)} 50%{transform:translateY(-10px)} 100%{transform:translateY(0)} }
-
-        .game-title {
-            font-size: 4rem; color: #fff; font-weight: 800;
-            text-shadow: 4px 4px 0 #3f51b5; margin-bottom: 40px; letter-spacing: 5px;
-        }
-
-        .btn-start {
-            background: #fff; color: #1a237e; border: 4px solid #1a237e;
-            padding: 20px 60px; font-size: 1.5rem; font-weight: bold; cursor: pointer;
-            box-shadow: 6px 6px 0 #000; transition: transform 0.1s, box-shadow 0.1s;
-        }
-        .btn-start:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 #000; }
-
-        /* === 主界面布局 === */
-        #app {
-            width: 95vw; height: 92vh; max-width: 1600px;
-            display: grid; grid-template-columns: 300px 1fr 350px; grid-template-rows: 1fr; gap: 20px;
-            display: none;
-        }
-
-        .panel {
-            background: var(--panel-bg); border-radius: var(--border-radius);
-            padding: 25px; display: flex; flex-direction: column;
-            overflow-y: auto; box-shadow: var(--shadow);
-            border: 1px solid rgba(255,255,255,0.5);
-        }
-
-        button {
-            background: #f5f5f5; color: var(--text-main); border: none;
-            padding: 10px 15px; border-radius: 12px; cursor: pointer;
-            font-weight: 500; font-size: 0.9rem; transition: all 0.2s ease;
-        }
-        button:hover:not(:disabled) { background: var(--primary-light); color: var(--primary); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        button.primary { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(30, 136, 229, 0.2); }
-        button.primary:hover:not(:disabled) { background: #1565c0; }
-
-        /* 左栏 */
-        #col-left { position: relative; }
-        .settings-btn { position: absolute; top: 15px; left: 15px; background: transparent; font-size: 1.2rem; }
-        .settings-menu { display: none; position: absolute; top: 45px; left: 15px; background: #fff; border-radius: 12px; width: 160px; z-index: 20; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .settings-btn:hover + .settings-menu, .settings-menu:hover { display: block; }
-        .menu-item { padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 0.85rem; }
-        .menu-item:hover { background: var(--bg-color); }
-
-        .profile-card { text-align: center; margin-top: 10px; margin-bottom: 25px; position: relative; }
-        .avatar { font-size: 3.5rem; background: var(--primary-light); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; cursor: help; }
-        
-        /* 个人简介悬停 */
-        .tooltip {
-            visibility: hidden; width: 220px; background-color: #555; color: #fff;
-            text-align: left; border-radius: 6px; padding: 10px;
-            position: absolute; z-index: 1; top: 100%; left: 50%; margin-left: -110px;
-            opacity: 0; transition: opacity 0.3s; font-size: 0.8rem; line-height: 1.4;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2); pointer-events: none;
-        }
-        .profile-card:hover .tooltip { visibility: visible; opacity: 1; }
-
-        .user-name { font-size: 1.2rem; font-weight: 700; cursor: help; }
-        .user-title { background: var(--accent-light); color: var(--accent); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; margin-top: 5px; }
-
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
-        .stat-item { text-align: center; background: #f8f9fa; padding: 10px; border-radius: 12px; }
-        .stat-label { font-size: 0.75rem; color: var(--text-sub); display: block; margin-bottom: 2px; }
-        .stat-num { font-size: 1rem; font-weight: 600; color: var(--primary); }
-
-        .bars-area .bar-row { margin-bottom: 15px; }
-        .bar-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; color: var(--text-sub); }
-        .bar-track { height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
-
-        .shop-section { margin-top: auto; padding-top: 15px; border-top: 1px dashed #ddd; }
-        .shop-header { font-weight: 600; margin-bottom: 10px; color: var(--text-main); display: flex; justify-content: space-between; }
-        .shop-grid { display: grid; gap: 8px; }
-        .btn-shop { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #eee; font-size: 0.85rem; padding: 8px 12px; }
-        .btn-shop:hover { border-color: var(--warning); background: #fff8e1; }
-
-        /* 中栏 */
-        .nav-block { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid #f0f0f0; }
-        .nav-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        
-        .exhibit-card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 12px; transition: all 0.2s; }
-        .exhibit-card.active { border-left: 4px solid var(--primary); }
-        .exhibit-card.waiting { border-left: 4px solid var(--warning); background: #fff8e1; }
-        
-        .task-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-        .task-btn { font-size: 0.8rem; padding: 8px 4px; background: #f5f5f5; border-radius: 8px; display: flex; flex-direction: column; align-items: center; }
-        .task-btn:hover:not(:disabled) { background: var(--primary-light); color: var(--primary); }
-        .task-btn.done { background: #e8f5e9; color: var(--success); cursor: default; }
-
-        /* 右栏 */
-        .log-header { font-weight: 700; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .log-tag { background: var(--primary-light); color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; }
-        #log-container { flex: 1; background: #f9f9f9; border-radius: 12px; padding: 15px; overflow-y: scroll; font-size: 0.9rem; line-height: 1.6; }
-        .log-entry { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #eee; }
-        .log-turn { text-align: center; color: var(--text-sub); font-size: 0.85rem; margin: 15px 0; font-weight: bold; position: relative; }
-        .log-turn::before, .log-turn::after { content: ""; display: inline-block; width: 30px; height: 1px; background: #ddd; vertical-align: middle; margin: 0 10px; }
-        .log-danger { color: var(--danger); } .log-success { color: var(--success); }
-
-        /* 弹窗 */
-        .modal-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.6); /* 纯色不模糊 */
-            display: flex; justify-content: center; align-items: center; z-index: 100; 
-        }
-        .hidden { display: none !important; }
-        .modal-box { 
-            background: white; width: 500px; max-width: 90%; 
-            border-radius: 24px; padding: 30px; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2); 
-            border: 1px solid #f0f0f0;
-        }
-        .modal-title { font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 15px; text-align: center; }
-        .modal-text { margin-bottom: 25px; white-space: pre-wrap; line-height: 1.6; color: var(--text-main); font-size: 1rem; text-align: center; }
-        .choice-btn { 
-            width: 100%; margin-bottom: 10px; padding: 15px; 
-            background: #fff; border: 1px solid #eee; border-radius: 12px;
-            text-align: left; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-        }
-        .choice-btn:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); transform: translateY(-1px); }
-
-    </style>
-</head>
-<body>
-
-<div id="start-screen">
-    <div class="pixel-museum">🏛️</div>
-    <div class="game-title">博物馆生存指南</div>
-    <button class="btn-start" onclick="startGame()">开始游戏</button>
-</div>
-
-<div id="app">
-    <div class="panel" id="col-left">
-        <button class="settings-btn">⚙️</button>
-        <div class="settings-menu">
-            <div class="menu-item" onclick="game.undoQuarter()">↺ 返回上一季度</div>
-            <div class="menu-item" onclick="location.reload()">☠ 重置所有数据</div>
-        </div>
-
-        <div class="profile-card">
-            <div class="avatar">🏛️</div>
-            <div class="tooltip" id="user-intro">
-                【个人档案】<br>
-                一名怀揣梦想进入博物馆行业的年轻人。<br>
-                性格：随机生成<br>
-                特长：头发浓密（暂时）<br>
-                座右铭：为了文物，为了经费！
-            </div>
-            <div class="user-name" id="ui-name">NoName</div>
-            <div class="user-title" id="ui-title">助理馆员</div>
-            <div style="font-size:0.8rem; margin-top:5px; color:#90a4ae;" id="ui-edu">PHD</div>
-            <button id="btn-promote" class="primary" style="width:100%; margin-top:15px; font-size:0.85rem;" onclick="game.actionPromote()" disabled>申请职称评定</button>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-item"><span class="stat-label">智商</span><span class="stat-num" id="ui-iq">0</span></div>
-            <div class="stat-item"><span class="stat-label">情商</span><span class="stat-num" id="ui-eq">0</span></div>
-            <div class="stat-item"><span class="stat-label">声望</span><span class="stat-num" id="ui-rep">0</span></div>
-            <div class="stat-item"><span class="stat-label">经费</span><span class="stat-num" id="ui-money" style="font-size:0.9rem">0</span></div>
-        </div>
-
-        <div class="bars-area">
-            <div class="bar-row">
-                <div class="bar-label"><span>健康</span><span id="txt-health">100</span></div>
-                <div class="bar-track"><div class="bar-fill" id="bar-health" style="background:var(--danger)"></div></div>
-            </div>
-            <div class="bar-row">
-                <div class="bar-label"><span>愉悦</span><span id="txt-mood">100</span></div>
-                <div class="bar-track"><div class="bar-fill" id="bar-mood" style="background:var(--warning)"></div></div>
-            </div>
-        </div>
-
-        <div class="leisure-section">
-            <div class="leisure-header">
-                <span>☕ 摸鱼休息</span> <span id="limit-leisure" style="color:var(--primary)">4/4</span>
-            </div>
-            <div class="leisure-grid" style="display:grid; gap:8px;">
-                <button class="btn-leisure" style="display:flex; justify-content:space-between;" onclick="game.actionLeisure('slack')"><span>闭目养神</span><span>💤</span></button>
-                <button class="btn-leisure" style="display:flex; justify-content:space-between;" onclick="game.actionLeisure('read')"><span>阅读书籍</span><span>📚</span></button>
-                <button class="btn-leisure" style="display:flex; justify-content:space-between;" onclick="game.actionLeisure('gossip')"><span>聊聊八卦</span><span>💬</span></button>
-            </div>
-        </div>
-
-        <div class="shop-section">
-            <div class="shop-header">🛒 文创商店</div>
-            <div class="shop-grid">
-                <button class="btn-shop" onclick="game.actionShop('coffee')">
-                    <span>☕ 咖啡 (50元)</span><span style="font-size:0.75em; color:#999">-健康 +愉悦</span>
-                </button>
-                <button class="btn-shop" onclick="game.actionShop('meal')">
-                    <span>🍱 小食套餐 (100元)</span><span style="font-size:0.75em; color:#999">++健康 ++愉悦</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="panel" id="col-middle" style="background:#f8faff; border:none; padding:0; box-shadow:none;">
-        <div class="nav-block">
-            <div class="nav-title">
-                <span>🔬 科研项目</span>
-                <span style="font-size:0.9rem; color:var(--text-sub)" id="research-count">0/5</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span id="research-msg" style="font-size:0.85rem; color:var(--text-sub);">窗口期关闭</span>
-                <button id="btn-research" class="primary" onclick="game.actionResearch()" disabled>申报</button>
-            </div>
-        </div>
-
-        <div class="nav-block" style="flex:1; display:flex; flex-direction:column;">
-            <div class="nav-title">
-                <span>🏛️ 展览策划</span>
-                <div style="font-size:0.8rem; color:#e57373;">每次策展消耗少量健康</div>
-            </div>
-            
-            <button id="btn-new-exhibit" class="primary" style="margin-bottom:15px; width:100%; padding:12px;" onclick="game.actionApplyExhibit()">+ 申请新展览</button>
-            <div id="exhibits-container" style="flex:1; overflow-y:auto; padding-right:5px;"></div>
-        </div>
-    </div>
-
-    <div class="panel" id="col-right">
-        <div class="log-header">
-            <span>工作周报</span><span class="log-tag">Y<span id="ui-year">1</span> - Q<span id="ui-quarter">1</span></span>
-        </div>
-        <div id="log-container"></div>
-        <button class="primary" onclick="game.nextQuarter()" style="margin-top:15px; height:55px; font-size:1.1rem; border-radius:16px;">结束本季度 🌙</button>
-    </div>
-</div>
-
-<div id="modal-overlay" class="modal-overlay hidden" onclick="game.tryCloseModal(event)">
-    <div class="modal-box" onclick="event.stopPropagation()">
-        <div class="modal-title" id="modal-title">TITLE</div>
-        <div class="modal-text" id="modal-text">Content...</div>
-        <div class="choice-list" id="modal-choices"></div>
-    </div>
-</div>
-
-<script>
 // ==================== 数据配置 ====================
 const NAME_DB = ["张吉惟","林国瑞","林玟书","林雅南","江奕云","刘柏宏","阮建安","林子帆","夏志豪","吉茹定","李中冰","黄文隆","谢彦文","傅智翔","洪振霞","刘姿婷","荣姿康","吕致盈","方一强","黎芸贵","郑伊雯","雷进宝","吴美隆","吴心真","王美珠","郭芳天","李雅惠","陈文婷","曹敏侑","王依婷"];
 
 const TITLES = [
-    { name: "助理馆员", require: { health:60, mood:50, ability:40, rep:10, quarters:4 } },
-    { name: "馆员", require: { health:50, mood:40, iq:60, eq:40, rep:50, quarters:24 } },
-    { name: "副研究员", require: { health:40, mood:30, iq:80, eq:60, rep:150, quarters:32 } },
-    { name: "研究员", require: { health:30, mood:20, iq:90, eq:80, rep:300, quarters:48 } },
-    { name: "馆长", require: { health:1, mood:1, iq:100, eq:90, rep:500, quarters:60 } }
+    { name: "助理馆员", require: { health:60, mood:50, ability:40, rep:10, quarters:4 }, salary: 3000 },
+    { name: "馆员", require: { health:50, mood:40, iq:60, eq:40, rep:50, quarters:24 }, salary: 6000 },
+    { name: "副研究馆员", require: { health:40, mood:30, iq:80, eq:60, rep:150, quarters:32 }, salary: 9000 },
+    { name: "研究馆员", require: { health:30, mood:20, iq:90, eq:80, rep:300, quarters:48 }, salary: 12000 },
+    { name: "馆长", require: { health:1, mood:1, iq:100, eq:90, rep:500, quarters:60 }, salary: 15000 }
 ];
 
+const ADMIN_TASKS = [
+    { text: "上面突然要检查党建材料，小王你今晚把这三年的会议记录整理一下，明天早上要。", failDesc: "通宵整理会议记录，累得像条狗。" },
+    { text: "周末有个'行业赋能'的线上研讨会，没人想去，你代表咱们馆挂个号听一下。", failDesc: "挂了一周末的网课，电脑都烫了。" },
+    { text: "馆里要搞'精神文明卫生评比'，你去负责检查各个办公室的垃圾桶分类。", failDesc: "翻了一天垃圾桶，身上都有味儿了。" },
+    { text: "那个谁，把去年的报销单据重新贴一下，财务说胶水不合格。", failDesc: "贴发票贴到手抽筋，毫无意义的工作。" },
+    { text: "有个兄弟单位来参观，缺个端茶倒水的，你形象好，去顶一下。", failDesc: "全程假笑端茶倒水，脸都僵了。" },
+    { text: "领导要在年会上致辞，你给写个'既有高度又接地气'的稿子。", failDesc: "改了八百遍稿子，最后领导还是念了旧的。" }
+];
+
+
 const EX_TASKS = {
-    'collect': { name: "资料收集", cost: 8000, story: "资料收集工作终于有了眉目，看着厚厚的文件夹，你很有成就感！" },
-    'read':    { name: "阅读整理", cost: 5000, story: "熬夜整理笔记虽然辛苦，但思路一下子清晰了不少。" },
-    'trip':    { name: "出差调研", cost: 20000, story: "这次出差收获颇丰，带回了珍贵的一手资料。" },
-    'theme':   { name: "主题选定", cost: 10000, story: "头脑风暴会议很成功，展览的主题终于敲定了！" },
-    'items':   { name: "展品选择", cost: 30000, story: "展品清单经过多轮筛选，终于完美出炉。" },
-    'design':  { name: "形式设计", cost: 40000, story: "设计方案改了又改，现在的效果大家都说好。" },
-    'souvenir':{ name: "文创设计", cost: 15000, story: "文创样品出来了，看着就让人想买买买！" }
+    // === 阶段一：学术研究期 (前期：便宜、基础) ===
+    'collect': { name: "资料收集", phase: 1, cost: 3000, story: "在故纸堆里翻找线索。" },
+    'read':    { name: "阅读整理", phase: 1, cost: 2000, story: "梳理出了清晰的学术脉络。" },
+    'trip':    { name: "出差调研", phase: 1, cost: 8000, story: "奔波在田野调查的一线。" },
+    
+    // === 阶段二：策划规划期 (中期：烧脑、关键) ===
+    'theme':   { name: "主题选定", phase: 2, cost: 15000, story: "确立了展览的核心灵魂。" },
+    'items':   { name: "展品选择", phase: 2, cost: 20000, story: "精选了最震撼的文物。" },
+    
+    // === 阶段三：落地执行期 (后期：烧钱、死线) ===
+    'design':  { name: "形式设计", phase: 3, cost: 50000, story: "设计方案极其昂贵但华丽。" },
+    'souvenir':{ name: "文创设计", phase: 3, cost: 30000, story: "开发了掏空观众钱包的产品。" }
 };
 
 const EX_THEMES = [
@@ -317,6 +44,28 @@ const EX_THEMES = [
     "《人间烟火：百年市井生活记忆》",
     "《消失的古国：三星堆考古新发现》"
 ];
+
+const UNIVERSITY_COURSES = [
+    { id: 1, name: "博物馆管理理论与实践", intro: "讲授博物馆机构运行、组织架构及管理方法。", credits: 4 },
+    { id: 2, name: "策展实践导论", intro: "讲授策展思路、策略及现场实现。", credits: 4 },
+    { id: 3, name: "项目与展览策划实务", intro: "案例学习展览策划全流程。", credits: 4 },
+    { id: 4, name: "博物馆研究方法", intro: "培养研究设计与文献分析能力。", credits: 4 },
+    { id: 5, name: "收藏与藏品护理", intro: "系统理解藏品的收集、分类、存储及维护。", credits: 3 },
+    { id: 6, name: "展览内容开发", intro: "聚焦展览主题构思、叙事设计与展陈内容。", credits: 3 },
+    { id: 7, name: "博物馆教育与公众参与", intro: "探讨策划教育项目与社区互动。", credits: 3 },
+    { id: 8, name: "策展管理", intro: "专注展览项目管理，包括预算与进度控制。", credits: 3 },
+    { id: 9, name: "数字媒体与博物馆展示", intro: "介绍数字工具在博物馆中的应用。", credits: 3 },
+    { id: 10, name: "艺术史与文化遗产背景", intro: "通过历史脉络理解藏品意义。", credits: 3 },
+    { id: 11, name: "档案理论与管理", intro: "讲授档案保存、整理与数字化。", credits: 3 },
+    { id: 12, name: "预防性保护技术", intro: "学习环境控制与基本修复流程。", credits: 3 },
+    { id: 13, name: "博物馆学导论", intro: "介绍博物馆的起源、发展、功能及基本理论。", credits: 2 },
+    { id: 14, name: "博物馆伦理与法律", intro: "学习博物馆伦理、产权与文物法律。", credits: 2 },
+    { id: 15, name: "现场实习与博物馆实践", intro: "在博物馆进行短期实习。", credits: 2 },
+    { id: 16, name: "博物馆市场与传播", intro: "培训品牌构建与公众沟通策略。", credits: 2 },
+];
+
+
+
 
 
 // 策展专属剧情库 (Key: Task -> Theme -> Array of Objects)
@@ -406,7 +155,7 @@ const CURATION_EVENTS = {
                 desc: "描述：抵达秦皇陵遗址公园时下起暴雨，鞋子全湿了，但原定只有半天拍摄时间。",
                 choices: [
                     { txt: "A. 冒雨作业：穿雨衣坚持拍摄，精神可嘉但效果一般。", effect: { iq: 5, health: -8, mood: -4 }, res: "拍到了雨中的遗址，别有一番风味。" },
-                    { txt: "B. 室内访谈：放弃外景，改为深入采访工作人员。", effect: { eq: 7, iq: 5, health: -4 }, res: "获得了意想不到的口述资料。" },
+                    { txt: "B. 室内访谈：放弃外景，改为深入采访工作人员。", effect: { eq: 8, iq: 5, health: -4 }, res: "获得了意想不到的口述资料。" },
                     { txt: "C. 等雨停：赌一把运气，如果雨不停就用旧素材。", effect: { iq: 4, health: -3, mood: -6 }, res: "雨没停...只能用旧图了。" }
                 ]
             },
@@ -414,9 +163,9 @@ const CURATION_EVENTS = {
                 title: "事件 3.2：热情的接待",
                 desc: "描述：当地博物馆的接待人员非常热情，晚上安排了长达3小时的酒局饭局。",
                 choices: [
-                    { txt: "A. 欣然赴约：这是建立人脉的好机会，喝！", effect: { eq: 8, health: -7, mood: 3 }, res: "交到了朋友，但宿醉头痛。" },
-                    { txt: "B. 婉言拒绝：借口身体不适回酒店整理笔记。", effect: { iq: 6, eq: 3, health: -3 }, res: "由于拒绝，对方略显冷淡。" },
-                    { txt: "C. 露个脸：去坐半小时，喝杯茶就溜走。", effect: { eq: 6, iq: 4, health: -4 }, res: "得体的社交。" }
+                    { txt: "A. 欣然赴约：这是建立人脉的好机会，喝！", effect: { eq: 9, health: -7, mood: 3 }, res: "交到了朋友，但宿醉头痛。" },
+                    { txt: "B. 婉言拒绝：借口身体不适回酒店整理笔记。", effect: { iq: 6, eq: 5, health: -3 }, res: "由于拒绝，对方略显冷淡。" },
+                    { txt: "C. 露个脸：去坐半小时，喝杯茶就溜走。", effect: { eq: 7, iq: 4, health: -4 }, res: "得体的社交。" }
                 ]
             },
             {
@@ -434,7 +183,7 @@ const CURATION_EVENTS = {
                 choices: [
                     { txt: "A. 咬牙坚持：站着去，在车上还能用手机看资料。", effect: { iq: 5, health: -8, mood: -5 }, res: "腿断了，但资料看完了。" },
                     { txt: "B. 改签推迟：晚一天去，保证休息，但压缩调研时间。", effect: { health: -3, iq: 4 }, res: "精神饱满地开始了第二天的行程。" },
-                    { txt: "C. 拼车前往：找陌生人拼车，贵但快，社交风险未知。", effect: { eq: 5, health: -5, mood: -4, money: -500 }, res: "一路尬聊，但准时到达。" }
+                    { txt: "C. 拼车前往：找陌生人拼车，贵但快，社交风险未知。", effect: { eq: 7, health: -5, mood: -4, money: -500 }, res: "一路尬聊，但准时到达。" }
                 ]
             }
         ],
@@ -946,8 +695,8 @@ const CURATION_EVENTS = {
                 desc: "描述：工作室建在垃圾填埋场旁，恶臭熏天，你仍需保持优雅微笑。",
                 choices: [
                     { txt: "A. 戴防毒面具：显得很不礼貌，但保命要紧。", effect: { health: -2, eq: -5, iq: 4 }, res: "艺术家觉得你不尊重他的环境。" },
-                    { txt: "B. 强忍恶心：用意志力克服生理反应。", effect: { eq: 8, health: -6, mood: -6 }, res: "忍常人所不能忍，佩服。" },
-                    { txt: "C. 喷满香水：试图用香奈儿盖过垃圾味。", effect: { eq: 5, health: -4, mood: -3 }, res: "混合的味道更恶心了。" }
+                    { txt: "B. 强忍恶心：用意志力克服生理反应。", effect: { eq: 9, health: -6, mood: -6 }, res: "忍常人所不能忍，佩服。" },
+                    { txt: "C. 喷满香水：试图用香奈儿盖过垃圾味。", effect: { eq: 6, health: -4, mood: -3 }, res: "混合的味道更恶心了。" }
                 ]
             },
             {
@@ -963,18 +712,18 @@ const CURATION_EVENTS = {
                 title: "事件 3.3：狼狈逃离",
                 desc: "描述：潜入竞对展览偷拍被安保认出，必须在两分钟内尴尬地逃离现场。",
                 choices: [
-                    { txt: "A. 假装路人：淡定地走出去，死不承认。", effect: { eq: 7, health: -3, mood: -2 }, res: "只要我不尴尬，尴尬的就是别人。" },
+                    { txt: "A. 假装路人：淡定地走出去，死不承认。", effect: { eq: 8, health: -3, mood: -2 }, res: "只要我不尴尬，尴尬的就是别人。" },
                     { txt: "B. 夺路狂奔：丢脸就丢脸，别被抓住。", effect: { health: -5, mood: -5, iq: 4 }, res: "跑得比兔子还快。" },
-                    { txt: "C. 反客为主：声称是来谈收购的。", effect: { iq: 6, eq: 5, mood: -8 }, res: "虽然是瞎编，但镇住了场面。" }
+                    { txt: "C. 反客为主：声称是来谈收购的。", effect: { iq: 6, eq: 7, mood: -8 }, res: "虽然是瞎编，但镇住了场面。" }
                 ]
             },
             {
                 title: "事件 3.4：雨夜蹲守",
                 desc: "描述：艺术家突然抑郁闭门不见，你在门口淋着冷雨苦苦蹲守了一整夜。",
                 choices: [
-                    { txt: "A. 苦肉计：发自拍给他看淋湿的样子。", effect: { eq: 8, health: -7, mood: -4 }, res: "艺术家心软了，终于开了门。" },
-                    { txt: "B. 留信离开：塞一张纸条，回家洗热水澡。", effect: { iq: 5, health: -3, eq: 4 }, res: "得体的处理方式。" },
-                    { txt: "C. 破门而入：担心他自杀，直接踹门。", effect: { iq: 4, eq: 8 }, res: "虽然粗鲁，但救了他一命（大概）。" }
+                    { txt: "A. 苦肉计：发自拍给他看淋湿的样子。", effect: { eq: 9, health: -7, mood: -4 }, res: "艺术家心软了，终于开了门。" },
+                    { txt: "B. 留信离开：塞一张纸条，回家洗热水澡。", effect: { iq: 5, health: -3, eq: 5 }, res: "得体的处理方式。" },
+                    { txt: "C. 破门而入：担心他自杀，直接踹门。", effect: { iq: 4, eq: 9 }, res: "虽然粗鲁，但救了他一命（大概）。" }
                 ]
             }
         ],
@@ -1494,9 +1243,9 @@ const CURATION_EVENTS = {
                 title: "事件 3.2：半夜蚕声",
                 desc: "描述：必须亲自尝试养蚕，半夜被数万只蚕宝宝啃食桑叶的沙沙声吓醒。",
                 choices: [
-                    { txt: "A. 克服恐惧：这也是一种自然白噪音。", effect: { eq: 6, mood: 3, health: -4 }, res: "你居然听着这声音睡着了。" },
+                    { txt: "A. 克服恐惧：这也是一种自然白噪音。", effect: { eq: 7, mood: 3, health: -4 }, res: "你居然听着这声音睡着了。" },
                     { txt: "B. 戴耳塞睡：眼不见心不烦。", effect: { health: -2, iq: 4, mood: -2 }, res: "睡眠质量一般。" },
-                    { txt: "C. 换人来养：把任务丢给实习生。", effect: { eq: 4, health: -2, mood: -4 }, res: "实习生黑眼圈很重。" }
+                    { txt: "C. 换人来养：把任务丢给实习生。", effect: { eq: 5, health: -2, mood: -4 }, res: "实习生黑眼圈很重。" }
                 ]
             },
             {
@@ -1739,7 +1488,7 @@ const CURATION_EVENTS = {
                 choices: [
                     { txt: "A. 逃离现场：san值狂掉，无法继续工作。", effect: { health: -4, mood: -7, iq: 3 }, res: "真的很吓人。" },
                     { txt: "B. 触摸脸庞：克服恐惧，检查皮肤材质。", effect: { iq: 7, health: -5, mood: -4 }, res: "专业的触感检查。" },
-                    { txt: "C. 质问设计：为什么要设计得这么像人？", effect: { eq: 6, iq: 4, health: -3 }, res: "引发了哲学讨论。" }
+                    { txt: "C. 质问设计：为什么要设计得这么像人？", effect: { eq: 8, iq: 4, health: -3 }, res: "引发了哲学讨论。" }
                 ]
             },
             {
@@ -1757,7 +1506,7 @@ const CURATION_EVENTS = {
                 choices: [
                     { txt: "A. 伪造证件：假装是维修工混进去。", effect: { health: -8, iq: 6, rep: -5 }, res: "被机器狗识破并驱逐。" },
                     { txt: "B. 无人机侦查：飞进去拍两张就跑。", effect: { iq: 7, health: -4, mood: -6 }, res: "拍到了机密画面，但无人机被击落了。" },
-                    { txt: "C. 正规预约：虽然要排队三个月。", effect: { eq: 5, iq: 3, health: -2 }, res: "按规矩办事。" }
+                    { txt: "C. 正规预约：虽然要排队三个月。", effect: { eq: 7, iq: 3, health: -2 }, res: "按规矩办事。" }
                 ]
             }
         ],
@@ -2162,7 +1911,7 @@ const CURATION_EVENTS = {
                 choices: [
                     { txt: "A. 保持冷静：割断缠绕物，慢慢上浮。", effect: { iq: 8, health: -5, mood: -5 }, res: "死里逃生，极其冷静。" },
                     { txt: "B. 恐慌挣扎：急速上浮，得了减压病。", effect: { health: -10, mood: -8, iq: 2 }, res: "被送进高压氧舱抢救。" },
-                    { txt: "C. 呼叫潜伴：做手势求救，幸好有人在。", effect: { eq: 7, health: -3, mood: -4 }, res: "团队合作救了命。" }
+                    { txt: "C. 呼叫潜伴：做手势求救，幸好有人在。", effect: { eq: 9, health: -3, mood: -4 }, res: "团队合作救了命。" }
                 ]
             },
             {
@@ -2565,9 +2314,9 @@ const CURATION_EVENTS = {
                 title: "事件：江宁织造",
                 desc: "前往南京考察江宁织造博物馆，想借几件清代云锦，对方馆长态度冷淡。",
                 choices: [
-                    { txt: "A. 三顾茅庐：天天去门口堵馆长。", effect: { eq: 8, health: -6, mood: -4 }, res: "终于借到了。" },
+                    { txt: "A. 三顾茅庐：天天去门口堵馆长。", effect: { eq: 9, health: -6, mood: -4 }, res: "终于借到了。" },
                     { txt: "B. 放弃原件：回去找工厂定做仿品。", effect: { iq: 4, health: -2, mood: -3 }, res: "只能用仿品。" },
-                    { txt: "C. 交换展品：拿我们馆的镇馆之宝做交换。", effect: { eq: -6, iq: 6 }, res: "代价很大。" }
+                    { txt: "C. 交换展品：拿我们馆的镇馆之宝做交换。", effect: { eq: 5, iq: 6 }, res: "代价很大。" }
                 ]
             },
             {
@@ -2576,7 +2325,7 @@ const CURATION_EVENTS = {
                 choices: [
                     { txt: "A. 徒步进山：走坏两双鞋，感受作者的穷困。", effect: { health: -7, mood: 5, iq: 4 }, res: "身临其境。" },
                     { txt: "B. 无人机拍摄：飞进去拍个全景就撤。", effect: { iq: 5, health: -2, mood: -2 }, res: "素材不够丰富。" },
-                    { txt: "C. 借宿村农：和当地老人同吃同住听传说。", effect: { eq: 7, health: -4, mood: 4 }, res: "听到了很多故事。" }
+                    { txt: "C. 借宿村农：和当地老人同吃同住听传说。", effect: { eq: 9, health: -4, mood: 4 }, res: "听到了很多故事。" }
                 ]
             },
             {
@@ -2914,7 +2663,7 @@ const CURATION_EVENTS = {
         ]
     },
 
-    // ================== 展览七：民俗生活 ==================《红楼一梦：曹雪芹的文学世界》': {'collect': [{title: "事件：版本迷宫",desc: "市面上流传着十几种不同的《红楼梦》手抄本，其中一本号称是“庚寅本”孤本。",choices: [{ txt: "A. 重金购入：赌它是真的，震动文坛。", effect: { iq: 8, mood: 6, money: -10000 }, res: "竟然真的是真迹！" },{ txt: "B. 拍照留存：只买电子扫描件回来研究。", effect: { iq: 5, eq: 4, health: -2 }, res: "稳妥的研究。" },{ txt: "C. 斥为伪作：转身离开，不浪费经费。", effect: { iq: 4, health: -1, mood: 2 }, res: "避免了被骗。" }]},{title: "事件：红学论战",desc: "发现红学家们对于“秦可卿之死”有三种截然不同的说法，互不相让。",choices: [{ txt: "A. 全部罗列：展现学术界的百家争鸣。", effect: { iq: 6, eq: 4, health: -3 }, res: "客观公正。" },{ txt: "B. 选最猎奇的：哪个说法最劲爆就信哪个。", effect: { mood: 5, iq: -6 }, res: "被专家骂不懂装懂。" },{ txt: "C. 回归文本：只看书里怎么写，不理会专家。", effect: { iq: 5, mood: 3, eq: -3 }, res: "原著党的胜利。" }]},{title: "事件：家世深挖",desc: "需要查阅清宫内务府关于曹家被抄家的原始档案，档案馆手续繁琐。",choices: [{ txt: "A. 甚至住在那：连续一周吃泡面蹲点档案馆。", effect: { iq: 7, health: -6, mood: -4 }, res: "查到了第一手资料。" },{ txt: "B. 找关系：托人走后门快速调阅。", effect: { eq: 7, iq: -4 }, res: "欠了人情，但效率高。" },{ txt: "C. 引用二手：直接用前人整理好的资料。", effect: { iq: 3, health: -2, mood: -2 }, res: "资料有点过时。" }]}],'read': [{title: "事件：人物图谱",desc: "四百多个人物关系错综复杂，整理关系图时发现丫鬟的名字有好几个重复的。",choices: [{ txt: "A. 严谨考据：哪怕是同名也要通过细节区分开。", effect: { iq: 8, health: -5, mood: -5 }, res: "完美的人物关系图。" },{ txt: "B. 抓大放小：只整理主要人物，丫鬟随便处理。", effect: { iq: 4, health: -2, mood: 3 }, res: "无伤大雅。" },{ txt: "C. 各种连线：做成蜘蛛网一样的图，显示高深。", effect: { eq: 5, iq: -4 }, res: "观众看晕了。" }]},{title: "事件：诗词解析",desc: "书中的《葬花吟》太长，且典故极其晦涩，普通观众根本看不懂。",choices: [{ txt: "A. 逐句注解：写几千字的说明牌。", effect: { iq: 7, eq: -5, mood: -4 }, res: "太长了没人看。" },{ txt: "B. 白话翻译：翻译成现代大白话，意境全无。", effect: { eq: 6, iq: -5, mood: -3 }, res: "变成了顺口溜。" },{ txt: "C. 情感提炼：不解释字面，只讲悲剧命运。", effect: { eq: 7, iq: 4, mood: 4 }, res: "感人至深。" }]},{title: "事件：食谱复原",desc: "试图复原书中美食，发现有些做法在现代根本无法实现。",choices: [{ txt: "A. 寻找替代：用依云水代替雪水。", effect: { iq: 5, eq: 5, health: -2 }, res: "差不多就行。" },{ txt: "B. 理论展示：只列原料清单，不谈操作。", effect: { iq: 6, health: -3, mood: -2 }, res: "略显无聊。" },{ txt: "C. 坚持寻找：去深山老林找干净的雪。", effect: { health: -8, mood: 6 }, res: "极致的追求。" }]}],'trip': [{title: "事件：江宁织造",desc: "前往南京考察江宁织造博物馆，想借几件清代云锦，对方馆长态度冷淡。",choices: [{ txt: "A. 三顾茅庐：天天去门口堵馆长。", effect: { eq: 8, health: -6, mood: -4 }, res: "终于借到了。" },{ txt: "B. 放弃原件：回去找工厂定做仿品。", effect: { iq: 4, health: -2, mood: -3 }, res: "只能用仿品。" },{ txt: "C. 交换展品：拿我们馆的镇馆之宝做交换。", effect: { eq: -6, iq: 6 }, res: "代价很大。" }]},{title: "事件：香山故居",desc: "在传说中曹雪芹晚年居住的黄叶村考察，路极其难走，全是泥泞。",choices: [{ txt: "A. 徒步进山：走坏两双鞋，感受作者的穷困。", effect: { health: -7, mood: 5, iq: 4 }, res: "身临其境。" },{ txt: "B. 无人机拍摄：飞进去拍个全景就撤。", effect: { iq: 5, health: -2, mood: -2 }, res: "素材不够丰富。" },{ txt: "C. 借宿村农：和当地老人同吃同住听传说。", effect: { eq: 7, health: -4, mood: 4 }, res: "听到了很多故事。" }]},{title: "事件：园林采风",desc: "去苏州园林寻找大观园的影子，游客太多，根本拍不到空景。",choices: [{ txt: "A. 早起蹲守：凌晨四点翻墙进去拍。", effect: { eq: -8, health: -5, mood: 6 }, res: "被保安赶出来了，但拍到了。" },{ txt: "B. 后期P图：把游客一个个P掉。", effect: { iq: 5, health: -4, mood: -4 }, res: "P图累死人。" },{ txt: "C. 拍特写：只拍窗棂和太湖石，避开人群。", effect: { iq: 4, eq: 5, health: -2 }, res: "聪明的选择。" }]}],'theme': [{title: "事件：悲剧内核",desc: "是侧重“宝黛爱情”的凄美，还是“家族衰亡”的历史厚重感？",choices: [{ txt: "A. 纯爱战神：只讲爱情，吸引年轻情侣。", effect: { eq: 8, mood: 5, iq: -3 }, res: "年轻观众很多。" },{ txt: "B. 盛极而衰：讲封建家族的挽歌，深刻但压抑。", effect: { iq: 8, eq: 3, mood: -5 }, res: "学术评价高。" },{ txt: "C. 女性群像：聚焦“千红一哭，万艳同悲”。", effect: { iq: 7, eq: 6, health: -3 }, res: "极具共情力。" }]},{title: "事件：结局选择",desc: "展览的结尾要用哪个结局？高鹗的“复兴”还是脂评的“白茫茫大地”？",choices: [{ txt: "A. 团圆结局：大家都爱看好结果。", effect: { iq: -8, eq: 4 }, res: "被原著粉骂俗气。" },{ txt: "B. 彻底悲剧：尊重原作者本意，让人哭着出去。", effect: { iq: 8, mood: -6, eq: 4 }, res: "震撼人心。" },{ txt: "C. 开放式：让观众自己投票选择。", effect: { eq: 7, iq: 3, mood: 3 }, res: "互动性好。" }]},{title: "事件：虚实之间",desc: "领导建议把《红楼梦》和曹雪芹的生平混在一起讲，可能会误导观众。",choices: [{ txt: "A. 严格区分：左边讲书，右边讲史。", effect: { iq: 7, eq: 4, health: -3 }, res: "清晰明了。" },{ txt: "B. 模糊处理：既然是“梦”，就让它混淆吧。", effect: { mood: 6, iq: -4, eq: 5 }, res: "如梦似幻。" },{ txt: "C. 互文见义：用史料佐证小说细节。", effect: { iq: 6, eq: 5, health: -4 }, res: "高明的策展。" }]}],'items': [{title: "事件：通灵宝玉",desc: "需要一块玉来扮演“通灵宝玉”，库房里有一块真古玉和一块道具。",choices: [{ txt: "A. 上真家伙：保险费很贵，但质感无敌。", effect: { iq: 6, mood: 5, health: -4, money: -5000 }, res: "质感无敌。" },{ txt: "B. 用工艺品：打光好看，丢了不心疼。", effect: { eq: 5, iq: -3, health: -1 }, res: "拍照好看。" },{ txt: "C. 3D全息：根本不放实物，用光影。", effect: { iq: 7, mood: -5 }, res: "有点出戏。" }]},{title: "事件：戏服展示",desc: "想展示87版电视剧的戏服，但那套衣服已经旧得有些脱线了。",choices: [{ txt: "A. 原样展示：岁月痕迹也是情怀。", effect: { eq: 7, mood: 5, health: -2 }, res: "引发怀旧狂潮。" },{ txt: "B. 修补翻新：找裁缝缝补如新。", effect: { iq: 5, health: -3, eq: 4 }, res: "看起来很新。" },{ txt: "C. 仅展示照片：衣服太破就不拿出来了。", effect: { iq: 4, mood: -3, health: -1 }, res: "有点遗憾。" }]},{title: "事件：金陵十二钗画作",desc: "借不到清代改琦的《红楼梦图咏》原件，只能用高清复制品。",choices: [{ txt: "A. 坦诚标注：写明“复制品”，哪怕观众失望。", effect: { iq: 6, eq: 5, mood: -2 }, res: "诚实守信。" },{ txt: "B. 挂在远处：挂高一点，让人看不出是复制的。", effect: { iq: -6, eq: -5 }, res: "被发现了，很尴尬。" },{ txt: "C. 找现代画家：重新画一套现代风格的。", effect: { eq: 6, mood: 4, iq: -4 }, res: "别有风味。" }]}],'design': [{title: "事件：太虚幻境",desc: "入口处想做“太虚幻境”的效果，需要大量干冰和迷幻灯光。",choices: [{ txt: "A. 仙气飘飘：干冰拉满，不仅贵还缺氧。", effect: { mood: 8, health: -5, iq: -4 }, res: "宛如仙境。" },{ txt: "B. 纱幔投影：用层层叠叠的纱幔做效果。", effect: { iq: 6, eq: 5, health: -3 }, res: "唯美梦幻。" },{ txt: "C. 简单贴图：墙上贴张画完事。", effect: { iq: -4, mood: -6, health: -1 }, res: "太敷衍了。" }]},{title: "事件：葬花互动",desc: "设计了一个让观众体验黛玉葬花的区域，满地花瓣。",choices: [{ txt: "A. 真花瓣：每天换鲜花，香味扑鼻但极其费钱。", effect: { mood: 7, health: -6, iq: 4, money: -8000 }, res: "奢华体验。" },{ txt: "B. 绢花：看起来稍微有点假，但环保。", effect: { iq: 5, eq: 4, health: -2 }, res: "经济实惠。" },{ txt: "C. 投影踩踏：踩上去花瓣会散开的互动地屏。", effect: { iq: 6, eq: 6, mood: 3 }, res: "科技感十足。" }]},{title: "事件：背景音乐",desc: "选曲是个大问题，是用经典的《枉凝眉》还是古琴独奏？",choices: [{ txt: "A. 循环《枉凝眉》：经典是经典，听一天会疯。", effect: { eq: 6, health: -5 }, res: "员工被洗脑了。" },{ txt: "B. 清冷古琴：格调极高，但容易让人睡着。", effect: { iq: 6, mood: 4, eq: -3 }, res: "催眠神曲。" },{ txt: "C. 静音：此时无声胜有声。", effect: { iq: 4, mood: -4, eq: -6 }, res: "太冷清了。" }]}],'souvenir': [{title: "事件：判词抽签",desc: "把金陵十二钗的判词做成类似寺庙求签的筒，但这全是悲剧签。",choices: [{ txt: "A. 保持原样：抽到“孤独终老”也要认。", effect: { iq: 7, mood: -4, eq: -8 }, res: "观众不开心。" },{ txt: "B. 全部魔改：把判词都改成吉利话。", effect: { iq: -8, eq: 6 }, res: "失去了原著精神。" },{ txt: "C. 解读转化：虽是下下签，但附赠“逆天改命”卡。", effect: { iq: 6, eq: 7, mood: 3 }, res: "心理安慰满分。" }]},{title: "事件：冷香丸糖果",desc: "把宝钗吃的药“冷香丸”做成润喉糖。",choices: [{ txt: "A. 还原药味：加点中草药，苦苦的。", effect: { iq: 6, health: 3, mood: -3 }, res: "良药苦口。" },{ txt: "B. 薄荷糖：仅仅是白色药丸形状的糖。", effect: { eq: 5, iq: 3, health: -1 }, res: "普通的好吃。" },{ txt: "C. 豪华包装：卖的就是个盒子，糖不重要。", effect: { eq: -5, mood: 4 }, res: "买椟还珠。" }]},{title: "事件：大观园盲盒",desc: "推出大观园建筑微缩模型盲盒，但是“潇湘馆”因为有竹子很难开模。",choices: [{ txt: "A. 死磕细节：必须还原每一根竹子，成本爆炸。", effect: { iq: 7, mood: 5, health: -6, money: -5000 }, res: "做工精湛。" },{ txt: "B. 简化设计：把竹子做成一坨绿色的块。", effect: { iq: -4, mood: -5, eq: 3 }, res: "太丑了。" },{ txt: "C. 隐藏款：把最难做的设为隐藏款。", effect: { eq: 6, mood: 4, iq: -3 }, res: "大家都想抽隐藏款。" }]}]},// ================== 展览七：民俗生活 ==================
+    // ================== 展览七：民俗生活 ==================
     '《人间烟火：百年市井生活记忆》': {
         'collect': [
             {
@@ -2980,7 +2729,7 @@ const CURATION_EVENTS = {
                 desc: "听说老城区要拆迁，连夜去废墟里捡门牌号和老窗框。",
                 choices: [
                     { txt: "A. 全副武装：戴安全帽穿劳保鞋，注意落石。", effect: { iq: 5, health: -6, mood: -2 }, res: "捡到了好东西。" },
-                    { txt: "B. 雇人去捡：给收废品的大爷发钱让他帮忙留。", effect: { eq: 7, iq: 4, health: -2, money: -2000 }, res: "轻松搞定。" },
+                    { txt: "B. 雇人去捡：给收废品的大爷发钱让他帮忙留。", effect: { eq: 8, iq: 4, health: -2, money: -2000 }, res: "轻松搞定。" },
                     { txt: "C. 铤而走险：翻进围挡去拆那块最漂亮的砖雕。", effect: { health: -10, mood: 6, rep: -5 }, res: "太危险了！" }
                 ]
             },
@@ -2988,7 +2737,7 @@ const CURATION_EVENTS = {
                 title: "事件：早市体验",
                 desc: "为了记录真实的烟火气，凌晨三点去批发市场录音。",
                 choices: [
-                    { txt: "A. 融入其中：帮摊主搬菜，换取最真实的对话。", effect: { eq: 8, health: -7, mood: 5 }, res: "录到了最真实的声音。" },
+                    { txt: "A. 融入其中：帮摊主搬菜，换取最真实的对话。", effect: { eq: 9, health: -7, mood: 5 }, res: "录到了最真实的声音。" },
                     { txt: "B. 隐形旁观：躲在角落里偷偷录。", effect: { iq: 5, mood: -2, eq: 3 }, res: "没被发现。" },
                     { txt: "C. 正常采访：拿着话筒去问，大家都变得很拘谨。", effect: { iq: 4, eq: -4, mood: -3 }, res: "素材很生硬。" }
                 ]
@@ -2999,7 +2748,7 @@ const CURATION_EVENTS = {
                 choices: [
                     { txt: "A. 大快朵颐：哪怕拉肚子也要吃完全套。", effect: { health: -8, mood: 7 }, res: "味道真不错，就是肚子疼。" },
                     { txt: "B. 浅尝辄止：每个菜尝一口就吐掉。", effect: { iq: 5, health: -2, eq: -3 }, res: "浪费粮食。" },
-                    { txt: "C. 采访食客：我不吃，我看别人吃什么表情。", effect: { eq: 6, iq: 4, health: -1 }, res: "聪明的调研。" }
+                    { txt: "C. 采访食客：我不吃，我看别人吃什么表情。", effect: { eq: 8, iq: 4, health: -1 }, res: "聪明的调研。" }
                 ]
             }
         ],
@@ -3403,8 +3152,8 @@ const CURATION_EVENTS = {
                 desc: "现场看专家提取象牙，必须用液氮冻住，稍有不慎象牙就会粉碎。",
                 choices: [
                     { txt: "A. 屏息凝视：大气不敢出，生怕吹口气就坏了。", effect: { mood: -5, iq: 4, health: -2 }, res: "紧张刺激。" },
-                    { txt: "B. 协助搬运：手都在抖，压力山大。", effect: { eq: -6, health: -4 }, res: "手抖了。" },
-                    { txt: "C. 视频记录：站远点拍素材，别添乱。", effect: { iq: 5, eq: 3, health: -1 }, res: "记录者。" }
+                    { txt: "B. 协助搬运：手都在抖，压力山大。", effect: { eq: 4, health: -4 }, res: "手抖了。" },
+                    { txt: "C. 视频记录：站远点拍素材，别添乱。", effect: { iq: 5, eq: 5, health: -1 }, res: "记录者。" }
                 ]
             },
             {
@@ -3536,11 +3285,218 @@ const CURATION_EVENTS = {
     }
 };
 
+// [新增] 摸鱼休息事件库
+const LEISURE_EVENTS = {
+    // === 1. 闭目养神 (健康+8~10, 愉悦+5~8) ===
+    'slack': [
+        {
+            title: "摸鱼：库房小憩",
+            desc: "躲进恒温恒湿的文物库房角落，靠着装满陶片的木箱眯一会。",
+            choices: [
+                { txt: "A. 深呼吸霉味", effect: { health: 8, mood: 4 }, res: "老物件的气息让人安心。" },
+                { txt: "B. 彻底放空", effect: { health: 10, mood: 5 }, res: "梦见陶俑活过来了。" }
+            ]
+        },
+        {
+            title: "摸鱼：罗汉床",
+            desc: "中午的展厅人迹罕至，你偷偷坐在那张昂贵的红木罗汉床（复制品）边上。",
+            choices: [
+                { txt: "A. 假装古人", effect: { health: 8, mood: 5 }, res: "稍微感受到了帝王享受。" },
+                { txt: "B. 揉揉太阳穴", effect: { health: 8, mood: 3 }, res: "偏头痛缓解了不少。" }
+            ]
+        },
+        {
+            title: "摸鱼：天台花园",
+            desc: "溜到天台的花园里，今天的阳光正好，几只麻雀在石雕上跳跃。",
+            choices: [
+                { txt: "A. 晒晒后背", effect: { health: 10, mood: 4 }, res: "暖洋洋的，充满电了。" },
+                { txt: "B. 听鸟叫声", effect: { health: 10, mood: 5 }, res: "比馆长的唠叨好听。" }
+            ]
+        },
+        {
+            title: "摸鱼：视听室",
+            desc: "借口去视听室检查设备，在最舒服的沙发位上戴上了降噪耳机。",
+            choices: [
+                { txt: "A. 播放白噪音", effect: { health: 8, mood: 3 }, res: "这里的隔音效果真棒。" },
+                { txt: "B. 闭目养神", effect: { health: 8, mood: 5 }, res: "偷得浮生半日闲。" }
+            ]
+        },
+        {
+            title: "摸鱼：按摩椅",
+            desc: "躲在员工休息室的按摩椅上，虽然皮面有点破，但功能还算正常。",
+            choices: [
+                { txt: "A. 开启震动", effect: { health: 10, mood: 3 }, res: "骨头都酥软了。" },
+                { txt: "B. 开启加热", effect: { health: 10, mood: 4 }, res: "腰肌劳损得到了救赎。" }
+            ]
+        },
+        {
+            title: "摸鱼：图录枕头",
+            desc: "趴在办公桌上，用两本厚厚的《文物图录》搭成了一个完美的枕头。",
+            choices: [
+                { txt: "A. 调整高度", effect: { health: 8, mood: 3 }, res: "书香（物理）助眠。" },
+                { txt: "B. 蒙头大睡", effect: { health: 10, mood: 4 }, res: "甚至流了一点口水。" }
+            ]
+        },
+        {
+            title: "摸鱼：咖啡厅角落",
+            desc: "跑到文创咖啡厅的角落，点了一杯不加糖的冰水，看着窗外发呆。",
+            choices: [
+                { txt: "A. 观察游客", effect: { health: 8, mood: 4 }, res: "看来大家都很累啊。" },
+                { txt: "B. 眼神失焦", effect: { health: 10, mood: 5 }, res: "大脑终于停止了转动。" }
+            ]
+        },
+        {
+            title: "摸鱼：监控室",
+            desc: "假装在安保监控室“协同工作”，其实是盯着几十个屏幕发呆。",
+            choices: [
+                { txt: "A. 数人头", effect: { health: 8, mood: 3 }, res: "有一种催眠的韵律。" },
+                { txt: "B. 靠着椅背", effect: { health: 10, mood: 4 }, res: "保安大哥递来一个靠枕。" }
+            ]
+        },
+        {
+            title: "摸鱼：微观世界",
+            desc: "在修复室等待胶水凝固的间隙，你盯着显微镜下的纤维纹路出神。",
+            choices: [
+                { txt: "A. 眨眨眼睛", effect: { health: 10, mood: 3 }, res: "缓解了视疲劳。" },
+                { txt: "B. 冥想片刻", effect: { health: 8, mood: 5 }, res: "心跳变得平缓了。" }
+            ]
+        },
+        {
+            title: "摸鱼：避难所",
+            desc: "厕所永远是打工人的避难所，你锁上隔间的门，享受片刻宁静。",
+            choices: [
+                { txt: "A. 靠着门板", effect: { health: 8, mood: 5 }, res: "世界上最安全的角落。" },
+                { txt: "B. 闭眼深蹲", effect: { health: 10, mood: 3 }, res: "腿麻了，但精神好了。" }
+            ]
+        }
+    ],
+
+    // === 2. 阅读书籍 (智商+1~2, 愉悦+3~5) ===
+    'read': [
+        {
+            title: "阅读：《西夏文字考》",
+            desc: "从书架最深处抽出一本生僻的《西夏文字考》，封面上积了一层灰。",
+            choices: [
+                { txt: "A. 硬着头皮读", effect: { iq: 2, mood: 3 }, res: "虽然看不懂，但大受震撼。" },
+                { txt: "B. 随手翻翻", effect: { iq: 1, mood: 4 }, res: "这字体长得真像二维码。" }
+            ]
+        },
+        {
+            title: "阅读：《盗墓笔记》",
+            desc: "偷偷摸出一本《盗墓笔记》，想看看小说里是怎么描写这座博物馆的。",
+            choices: [
+                { txt: "A. 寻找槽点", effect: { iq: 2, mood: 3 }, res: "现实考古哪有这么刺激。" },
+                { txt: "B. 沉浸剧情", effect: { iq: 1, mood: 5 }, res: "还是小说里更有意思。" }
+            ]
+        },
+        {
+            title: "阅读：《观众留言簿》",
+            desc: "翻看这季度的《观众留言簿》，里面充满了灵魂画手和段子手。",
+            choices: [
+                { txt: "A. 朗读好评", effect: { iq: 1, mood: 5 }, res: "被这位观众的彩虹屁逗乐。" },
+                { txt: "B. 摘抄建议", effect: { iq: 2, mood: 3 }, res: "有人建议展出奥特曼。" }
+            ]
+        },
+        {
+            title: "阅读：《照明设计指南》",
+            desc: "读一本最新的《全球博物馆照明设计指南》，图片极其精美华丽。",
+            choices: [
+                { txt: "A. 欣赏美图", effect: { iq: 1, mood: 5 }, res: "别人的展厅真有钱啊。" },
+                { txt: "B. 研究参数", effect: { iq: 2, mood: 3 }, res: "下次布展可以参考一下。" }
+            ]
+        },
+        {
+            title: "阅读：《职场厚黑学》",
+            desc: "拿起一本《职场厚黑学》，这书不知道是谁落在休息室茶几上的。",
+            choices: [
+                { txt: "A. 学习话术", effect: { iq: 2, mood: 3 }, res: "学到了如何优雅地甩锅。" },
+                { txt: "B. 批判一番", effect: { iq: 1, mood: 4 }, res: "这种书居然卖得这么好。" }
+            ]
+        },
+        {
+            title: "阅读：《宋宴》",
+            desc: "读一本关于古代食谱的闲书《宋宴》，上面详细记载了蟹酿橙的做法。",
+            choices: [
+                { txt: "A. 想象味道", effect: { iq: 1, mood: 5 }, res: "越看越饿，想点外卖。" },
+                { txt: "B. 研究食材", effect: { iq: 2, mood: 4 }, res: "古代人吃得真讲究。" }
+            ]
+        },
+        {
+            title: "阅读：时尚杂志",
+            desc: "翻阅一本过期的时尚杂志，想从里面找找文创产品的设计灵感。",
+            choices: [
+                { txt: "A. 剪报拼贴", effect: { iq: 2, mood: 4 }, res: "这配色要是做成丝巾绝了。" },
+                { txt: "B. 吐槽审美", effect: { iq: 1, mood: 3 }, res: "这也叫时尚？看不懂。" }
+            ]
+        },
+        {
+            title: "阅读：《修复师的修养》",
+            desc: "读一本《文物修复师的自我修养》，作者是业内的传奇大佬。",
+            choices: [
+                { txt: "A. 膜拜大神", effect: { iq: 1, mood: 5 }, res: "仿佛看到了工匠精神的光辉。" },
+                { txt: "B. 学习技巧", effect: { iq: 2, mood: 3 }, res: "这一招除锈很有启发。" }
+            ]
+        },
+        {
+            title: "阅读：时尚杂志",
+            desc: "翻开一本漫画书《我在故宫修文物》，画风温馨治愈。",
+            choices: [
+                { txt: "A. 快速刷完", effect: { iq: 1, mood: 5 }, res: "治愈了被甲方伤害的心。" },
+                { txt: "B. 细看分镜", effect: { iq: 2, mood: 4 }, res: "把枯燥的工作画得很萌。" }
+            ]
+        }
+    ],
+
+    // === 3. 聊聊八卦 (情商+1~2, 健康+3~5) ===
+    'gossip': [
+        {
+            title: "八卦：馆长的秘密",
+            desc: "茶水间里，行政小张正神秘兮兮地说馆长的假发好像歪了。",
+            choices: [
+                { txt: "A. 加入讨论", effect: { eq: 1, health: 4 }, res: "听说那假发是定制的。" },
+                { txt: "B. 会心一笑", effect: { eq: 2, health: 3 }, res: "这种秘密拉近了同事距离。" }
+            ]
+        },
+        {
+            title: "八卦：办公室CP",
+            desc: "听说修复组的老王和讲解员小李最近走得很近，经常一起吃食堂。",
+            choices: [
+                { txt: "A. 嗑CP", effect: { eq: 1, health: 5 }, res: "技术宅配解说花，挺好。" },
+                { txt: "B. 打听细节", effect: { eq: 2, health: 3 }, res: "原来只是在讨论展词。" }
+            ]
+        },
+        {
+            title: "八卦：夜半怪声",
+            desc: "保安大叔在门口抽烟，说昨晚巡逻时听到了青铜馆有奇怪的声音。",
+            choices: [
+                { txt: "A. 故作惊讶", effect: { eq: 2, health: 3 }, res: "博物馆没几个鬼故事不完整。" },
+                { txt: "B. 科学解释", effect: { eq: 1, health: 4 }, res: "肯定是风吹过通风管。" }
+            ]
+        },
+        {
+            title: "八卦：竞品分析",
+            desc: "隔壁市博物馆推出了一个爆款盲盒，大家都在讨论为什么我们做不出来。",
+            choices: [
+                { txt: "A. 吐槽领导", effect: { eq: 1, health: 5 }, res: "发泄了一通，心里爽多了。" },
+                { txt: "B. 分析竞品", effect: { eq: 2, health: 3 }, res: "主要是他们设计太丑萌了。" }
+            ]
+        },
+        {
+            title: "八卦：奇葩观众",
+            desc: "遇到一位极其奇葩的观众，非要说展柜里的玉猪龙是他家祖传的。",
+            choices: [
+                { txt: "A. 模仿语气", effect: { eq: 2, health: 4 }, res: "逗得大家哈哈大笑。" },
+                { txt: "B. 吐槽无奈", effect: { eq: 1, health: 3 }, res: "这种人年年有，习惯了。" }
+            ]
+        }
+    ]
+};
+
 // 为其他展览添加默认健康扣除 (模拟数据完整性)
 const DEFAULT_EVENTS = {
     'collect': [{txt:"上门拜访整理资料",effect:{rep:3,eq:2,health:-5},res:"获赠珍贵资料"},{txt:"施压获取",effect:{rep:-4,iq:1,health:-3,mood:-2},res:"引发抵触"}],
     'read': [{txt:"交叉考证",effect:{iq:3,rep:2,health:-6},res:"获认可"},{txt:"统一录入",effect:{rep:-2,iq:-2,health:-3},res:"被质疑"}],
-    'trip': [{txt:"提出合作方案",effect:{eq:4,rep:3,health:-7},res:"达成合作"},{txt:"单方要求",effect:{eq:-2,rep:-1,health:-4},res:"被婉拒"}],
+    'trip': [{txt:"提出合作方案",effect:{eq:7,rep:3,health:-7},res:"达成合作"},{txt:"单方要求",effect:{eq:-2,rep:-1,health:-4},res:"被婉拒"}],
     'theme': [{txt:"提出融合主题",effect:{eq:5,rep:4,health:-6},res:"全票通过"},{txt:"站队一方",effect:{eq:-2,rep:1,health:-4},res:"得罪同事"}],
     'items': [{txt:"策划深度专题",effect:{iq:3,rep:3,health:-6},res:"专业性强"},{txt:"只选美观展品",effect:{rep:-2,eq:1,health:-4},res:"被批肤浅"}],
     'design': [{txt:"针对性设计动线",effect:{iq:4,rep:3,health:-7},res:"体验佳"},{txt:"照搬模板",effect:{iq:-2,rep:-1,health:-3},res:"无特色"}],
@@ -3554,482 +3510,109 @@ EX_THEMES.forEach(theme => {
     }
 });
 
-const RANDOM_EVENTS = [
-    { title: "公交遇老人", desc: "公交车上遇蹒跚老人。", choices: [
-        { txt: "让座搀扶", cb: (g)=>{ g.showResult('老人是收藏家遗孀，捐赠玉器', { money: 80000, eq: 3 }); } },
-        { txt: "假装睡觉", cb: (g)=>{ g.showResult('无事发生', {}); } },
-        { txt: "嘲讽挡路", cb: (g)=>{ g.showResult('老人晕倒，赔医药费', { money: -20000, eq: -5 }); } }
-    ]},
-    // ... (保留所有随机事件) ...
-];
+// ==================== 随机事件库 (季度结算) ====================
+// 规则：2坏1好 (Good: 增加数值, Bad: 扣除数值)
+// 数值范围：公款[money] 2000-5000, 存款[savings] 500-1000, 智商/情商[iq/eq] 1-2, 愉悦/健康[mood/health] 5-8
+
+const RANDOM_EVENT_DB = {
+    // === 1. 生活类 (Life) ===
+    life: {
+        active: [
+            { title: "房东涨价", desc: "房东突然要求下季度房租涨价，态度强硬。", choices: [{ txt: "据理力争", effect: { mood: -6, health: -5 }, res: "吵了一架，虽然没涨价但气得头疼。" }, { txt: "默默忍受", effect: { savings: -800 }, res: "多交了800元房租，心在滴血。" }, { txt: "搬去朋友家", effect: { savings: 600, mood: 6 }, res: "省了房租，还和朋友开黑很开心。" }] },
+            { title: "深夜噪音", desc: "楼上邻居半夜开派对，吵得你睡不着。", choices: [{ txt: "上楼理论", effect: { health: -6, eq: -2 }, res: "差点打起来，身心俱疲。" }, { txt: "忍气吞声", effect: { mood: -8, health: -5 }, res: "一整晚没睡好，精神萎靡。" }, { txt: "报警处理", effect: { mood: 5, health: 6 }, res: "警察来了，世界终于清静了。" }] },
+            { title: "超市大促", desc: "楼下超市周年庆，人山人海。", choices: [{ txt: "疯狂抢购", effect: { savings: -600, health: -5 }, res: "买了一堆没用的东西，还累得腰疼。" }, { txt: "被踩掉鞋", effect: { mood: -7, health: -6 }, res: "东西没买着，鞋还丢了一只。" }, { txt: "理性捡漏", effect: { savings: 500, mood: 6 }, res: "抢到了半价的神户牛肉，省了一笔！" }] },
+            { title: "生病", desc: "换季流感来袭，你感觉喉咙发痒。", choices: [{ txt: "硬抗", effect: { health: -8, mood: -6 }, res: "病情加重，差点晕倒在工位。" }, { txt: "去私立医院", effect: { savings: -1000 }, res: "服务很好，但医药费花了一千块。" }, { txt: "吃老偏方", effect: { health: 8, mood: 5 }, res: "姜汤发汗，睡一觉居然痊愈了！" }] },
+            { title: "相亲局", desc: "家里安排了一场相亲，对方条件据说不错。", choices: [{ txt: "话不投机", effect: { mood: -7, eq: -2 }, res: "对方一直在炫富，令人作呕。" }, { txt: "买单走人", effect: { savings: -500, mood: -5 }, res: "对方没看上你，你还要付饭钱。" }, { txt: "遇到知音", effect: { mood: 8, eq: 2 }, res: "居然聊得很开心，心情大好！" }] },
+            { title: "理发赌博", desc: "理发师Tony老师提议给你换个\"最潮\"的发型。", choices: [{ txt: "同意，付钱！", effect: { mood: -8, rep: -3 }, res: "丑得不敢见人，同事都在笑你。" }, { txt: "办卡止损", effect: { savings: -1000 }, res: "被忽悠办了张卡，虽然发型依然丑。" }, { txt: "不为所动，还照原来的想法剪", effect: { mood: 8, rep: 3 }, res: "居然剪出了明星同款！自信爆棚。" }] },
+            { title: "宠物生病", desc: "家里的猫主子突然呕吐不止。", choices: [{ txt: "连夜急诊", effect: { savings: -1000, health: -5 }, res: "猫治好了，你的钱包空了，人也熬夜废了。" }, { txt: "焦虑百度", effect: { mood: -7, iq: -1 }, res: "被网上的虚假医疗信息吓得半死。" }, { txt: "自行喂药", effect: { health: 5, eq: 2 }, res: "凭借经验治好了，省了一大笔钱。" }] },
+            { title: "借钱", desc: "一个很久不联系的同学突然找你借钱。", choices: [{ txt: "借给他", effect: { savings: -1000 }, res: "他把你拉黑了，钱打水漂了。" }, { txt: "严词拒绝", effect: { mood: -5, eq: -2 }, res: "被他在同学群里骂冷血。" }, { txt: "哭穷劝退", effect: { eq: 2, savings: 0 }, res: "不仅没借，还反向找他借了点（没借成）。" }] },
+            { title: "交通意外", desc: "前一天晚上忘定闹钟了，起床太晚，上班快迟到了，你决定：", choices: [{ txt: "在路上焦急奔跑", effect: { health: -6, mood: -7 }, res: "你在路上被车撞了，还好只是擦破点皮。" }, { txt: "打车去上班", effect: { savings: -500 }, res: "没有迟到，但打车还蛮贵的。" }, { txt: "直接请假", effect: { savings: -500, mood: 2 }, res: "反正都迟了，大不了不去了。" }] },
+            { title: "做饭炸厨房", desc: "心血来潮想做饭，结果油锅起火。", choices: [{ txt: "手忙脚乱", effect: { health: -7, mood: -6 }, res: "吸入浓烟咳嗽半天，晚饭也没得吃。" }, { txt: "赔偿维修", effect: { savings: -800 }, res: "把油烟机烧坏了，还得买新的。" }, { txt: "完美救场", effect: { mood: 7, health: 5 }, res: "冷静灭火，点外卖吃得更香了。" }] }
+        ],
+        passive: [
+            { desc: "彩票中奖：买刮刮乐中了五百块！", effect: { savings: 500, mood: 6 } },
+            { desc: "丢了钱包：身份证银行卡全丢了，补办跑断腿。", effect: { savings: -600, mood: -7 } },
+            { desc: "捡到流浪猫：虽然花了点钱打疫苗，但很治愈。", effect: { savings: -500, mood: 8 } },
+            { desc: "马桶堵塞：通马桶花了两小时，恶心坏了。", effect: { health: -6, mood: -8 } },
+            { desc: "朋友请客：发小来找你玩，请你吃大餐。", effect: { health: 6, mood: 7 } },
+            { desc: "手机碎屏：手滑摔了手机，换屏好贵。", effect: { savings: -800, mood: -6 } },
+            { desc: "收到礼物：爸妈寄来了家乡特产。", effect: { health: 5, mood: 8 } },
+            { desc: "水管爆裂：家里发大水，家具泡了。", effect: { savings: -1000, mood: -8 } },
+            { desc: "睡眠极佳：昨晚做了个好梦，精神焕发。", effect: { health: 8, mood: 6 } },
+            { desc: "遭遇诈骗：接到诈骗电话，差点被骗。", effect: { iq: -1, mood: -5 } }
+        ]
+    },
+
+    audience: {
+        active: [
+            { title: "熊孩子", desc: "一个小孩试图攀爬恐龙骨架。", choices: [{ txt: "大声呵斥", effect: { rep: -3, mood: -5 }, res: "家长把你投诉了，说你吓坏了孩子。" }, { txt: "冲上去拉", effect: { health: -6, savings: -500 }, res: "孩子没事，你扭伤了腰，还赔了医药费。" }, { txt: "耐心教育", effect: { rep: 3, eq: 2 }, res: "全场观众为你鼓掌，家长羞愧道歉。" }] },
+            { title: "网红直播", desc: "网红在展厅开闪光灯直播，影响他人。", choices: [{ txt: "强行驱逐", effect: { rep: -3, mood: -5 }, res: "网红在网上挂你，引发网暴。" }, { txt: "听之任之", effect: { rep: -3, iq: -1 }, res: "普通观众觉得管理混乱，给差评。" }, { txt: "礼貌劝阻", effect: { rep: 3, eq: 2 }, res: "网红配合关了灯，还夸博物馆专业。" }] },
+            { title: "奇怪的投诉", desc: "观众投诉展厅里太冷，说阴气重。", choices: [{ txt: "回怼迷信", effect: { rep: -3, eq: -2 }, res: "被投诉态度恶劣。" }, { txt: "调高温度", effect: { money: -2000 }, res: "空调费超支了，而且别的观众喊热。" }, { txt: "借送毛毯", effect: { eq: 2, rep: 3 }, res: "提供了便民毛毯，观众很感动。" }] },
+            { title: "遗失物品", desc: "有人在展厅丢了最新款手机，大吵大闹。", choices: [{ txt: "推卸责任", effect: { rep: -3, mood: -5 }, res: "吵得不可开交，影响极坏。" }, { txt: "自掏腰包", effect: { savings: -1000 }, res: "为了息事宁人，你垫付了部分钱（太傻了）。" }, { txt: "调取监控", effect: { iq: 2, rep: 3 }, res: "两分钟帮他找回了手机，神探！" }] },
+            { title: "民科挑衅", desc: "一位民科在展厅大声宣扬\"文物都是假的\"。", choices: [{ txt: "当场辩论", effect: { health: -6, mood: -6 }, res: "秀才遇到兵，有理说不清，气死你。" }, { txt: "叫保安撵走", effect: { rep: -3 }, res: "被拍视频说是\"店大欺客\"。" }, { txt: "专业折服", effect: { iq: 2, rep: 3 }, res: "引经据典把他驳得哑口无言，观众叫好。" }] },
+            { title: "触摸展品", desc: "一位大爷非要摸摸那块汉代砖。", choices: [{ txt: "严厉制止", effect: { rep: -3, mood: -4 }, res: "大爷躺下讹人，说心脏病犯了。" }, { txt: "视而不见", effect: { money: -3000 }, res: "文物被摸包浆了，修复费扣工资。" }, { txt: "引导触摸区", effect: { eq: 2, rep: 3 }, res: "带他去专门的复制品触摸区，大爷很开心。" }] },
+            { title: "情侣吵架", desc: "一对情侣在展厅吵架，甚至摔东西。", choices: [{ txt: "上去劝架", effect: { health: -7, mood: -5 }, res: "被误伤，脸上挨了一巴掌。" }, { txt: "报警", effect: { rep: -3 }, res: "警车来了，观众都吓跑了。" }, { txt: "赠送文创", effect: { savings: -500, eq: 2 }, res: "自费送了个玩偶哄好了，恢复秩序。" }] },
+            { title: "外宾接待", desc: "突然来了一团外国游客，没有翻译。", choices: [{ txt: "手语比划", effect: { rep: -3, iq: -1 }, res: "鸡同鸭讲，场面尴尬。" }, { txt: "拒绝接待", effect: { rep: -3 }, res: "被投诉歧视，外交无小事。" }, { txt: "亲自上阵", effect: { iq: 2, rep: 3 }, res: "流利的英语征服了外宾。" }] },
+            { title: "学生破坏", desc: "春游的小学生在展板上乱涂乱画。", choices: [{ txt: "扣留学生", effect: { rep: -3, mood: -5 }, res: "家长来闹事，学校也抗议。" }, { txt: "更换展板", effect: { money: -2500 }, res: "只能用公款重新做一块。" }, { txt: "现场教育", effect: { eq: 2, rep: 3 }, res: "让他们擦干净并上了一堂公德课。" }] },
+            { title: "醉汉闯入", desc: "一个醉汉闯进大厅要找馆长喝酒。", choices: [{ txt: "肉搏", effect: { health: -8, mood: -5 }, res: "被打了一拳，乌眼青。但馆长很感动。" }, { txt: "给钱打发", effect: { savings: -600 }, res: "破财免灾，醉汉拿钱走了。" }, { txt: "智取", effect: { iq: 2, mood: 5 }, res: "骗他说馆长在派出所，把他忽悠走了。" }] }
+        ],
+        passive: [
+            { desc: "收到锦旗：帮助走失儿童，家长送来锦旗。", effect: { rep: 3, mood: 6 } },
+            { desc: "恶意差评：有人在网上造谣展品是义乌货。", effect: { rep: -3, mood: -5 } },
+            { desc: "大V打卡：百万粉博主来探馆，流量暴增。", effect: { rep: 3, money: 3000 } },
+            { desc: "投诉厕所：观众嫌厕所太少排队太久。", effect: { rep: -3, mood: -4 } },
+            { desc: "志愿者帮忙：大学生志愿者团队表现出色。", effect: { health: 6, mood: 6 } },
+            { desc: "有人晕倒：展厅太闷，观众中暑（赔了点钱）。", effect: { money: -2000, rep: -3 } },
+            { desc: "问卷好评：季度满意度调查获得高分。", effect: { rep: 3, mood: 5 } },
+            { desc: "熊孩子尿尿：古建柱子被童子尿浇灌。", effect: { money: -2000, mood: -7 } },
+            { desc: "收到捐赠：观众捐赠了一批老照片。", effect: { rep: 3, iq: 1 } },
+            { desc: "偷盗未遂：安保抓住了想偷展品的小偷。", effect: { rep: 3, mood: 5 } }
+        ]
+    },
+
+    hall: {
+        active: [
+            { title: "空调故障", desc: "展厅空调坏了，温度直逼40度。", choices: [{ txt: "暂停开放", effect: { money: -4000, rep: -3 }, res: "退票赔款，损失惨重。" }, { txt: "坚持开放", effect: { rep: -3, health: -5 }, res: "观众中暑，你也中暑了。" }, { txt: "紧急抢修", effect: { iq: 2, money: -2000 }, res: "虽然花了钱，但下午就修好了。" }] },
+            { title: "展柜起雾", desc: "温湿度控制失灵，玻璃上一层雾。", choices: [{ txt: "人工擦拭", effect: { health: -7, mood: -5 }, res: "擦了一天，手断了。" }, { txt: "置之不理", effect: { rep: -3 }, res: "根本看不清展品，体验极差。" }, { txt: "调整系统", effect: { iq: 2, mood: 5 }, res: "找到了参数BUG，一键解决。" }] },
+            { title: "灯光闪烁", desc: "主展厅灯光像迪厅一样闪。", choices: [{ txt: "全部关灯", effect: { rep: -3, mood: -4 }, res: "摸黑看展，被骂惨了。" }, { txt: "更换线路", effect: { money: -3000 }, res: "大工程，花了不少公款。" }, { txt: "更换灯泡", effect: { iq: 1, health: 5 }, res: "原来只是灯泡松了，虚惊一场。" }] },
+            { title: "老鼠出没", desc: "有观众看到展厅里有老鼠跑过。", choices: [{ txt: "全馆闭馆", effect: { money: -5000, rep: -3 }, res: "为了抓老鼠损失了一天门票。" }, { txt: "否认三连", effect: { rep: -3, mood: -5 }, res: "被拍了照片发网上，信誉扫地。" }, { txt: "专业消杀", effect: { money: -2000, health: 6 }, res: "连夜请专业公司搞定。" }] },
+            { title: "漏水危机", desc: "暴雨天，屋顶开始往下滴水。", choices: [{ txt: "拿桶接水", effect: { rep: -3, mood: -4 }, res: "满地是桶，太难看了。" }, { txt: "展品泡水", effect: { money: -5000, rep: -3 }, res: "未能及时转移，损失惨重！" }, { txt: "转移展品", effect: { health: 6, iq: 2 }, res: "全员出动及时转移，有惊无险。" }] },
+            { title: "地面打滑", desc: "保洁阿姨拖地太湿，有人滑倒。", choices: [{ txt: "推卸责任", effect: { rep: -3, eq: -2 }, res: "家属来拉横幅闹事。" }, { txt: "赔偿医药费", effect: { money: -3000 }, res: "赔了公款三千元。" }, { txt: "铺防滑垫", effect: { savings: -500, rep: 3 }, res: "自费买垫子，反应迅速获好评。" }] },
+            { title: "说明牌错误", desc: "专家指出有个年份写错了。", choices: [{ txt: "涂改液改", effect: { rep: -3, iq: -1 }, res: "太不专业了，像小学生作业。" }, { txt: "坚持没错", effect: { rep: -3, iq: -2 }, res: "死鸭子嘴硬，成了笑柄。" }, { txt: "重新制作", effect: { money: -2000, rep: 3 }, res: "知错能改，重新做了个金牌。" }] },
+            { title: "安检排队", desc: "节假日安检口排起长龙，怨声载道。", choices: [{ txt: "无动于衷", effect: { rep: -3, mood: -5 }, res: "被骂上了热搜。" }, { txt: "降低标准", effect: { rep: -3, health: -5 }, res: "放进去一个带打火机的，差点着火！" }, { txt: "增开通道", effect: { money: -2500, rep: 3 }, res: "临时雇人加通道，解决了拥堵。" }] },
+            { title: "监控死角", desc: "发现展厅角落是监控死角。", choices: [{ txt: "不管它", effect: { money: -4000, rep: -3 }, res: "结果真丢东西了！" }, { txt: "增加人力", effect: { health: -7, mood: -5 }, res: "你自己去那个角落站了一天岗。" }, { txt: "加装探头", effect: { money: -2000, iq: 1 }, res: "花小钱保平安。" }] },
+            { title: "讲解员请假", desc: "金牌讲解员突然失声，没人带团。", choices: [{ txt: "取消讲解", effect: { rep: -3, money: -2000 }, res: "退还了讲解费，观众失望。" }, { txt: "硬着头皮上", effect: { mood: -6, rep: -3 }, res: "你讲得结结巴巴，尴尬无比。" }, { txt: "电子导览", effect: { money: -2000, iq: 2 }, res: "紧急租了一批设备，效果还不错。" }] }
+        ],
+        passive: [
+            { desc: "设备老化：投影仪坏了，换新的好贵。", effect: { money: -4000, mood: -5 } },
+            { desc: "消防检查：顺利通过消防突击检查。", effect: { rep: 3, iq: 1 } },
+            { desc: "墙皮脱落：展厅墙皮掉了，连夜修补。", effect: { money: -2500, health: -5 } },
+            { desc: "发现白蚁：及时发现并消杀，保住了木构件。", effect: { money: -3000, iq: 1 } },
+            { desc: "WiFi升级：全馆覆盖高速WiFi，好评！", effect: { money: -5000, rep: 3 } },
+            { desc: "展柜破裂：熊孩子砸裂了玻璃，幸好文物没事。", effect: { money: -3000, mood: -6 } },
+            { desc: "绿植枯死：展厅植物没光照死了，清理麻烦。", effect: { health: -5, mood: -4 } },
+            { desc: "系统崩溃：票务系统瘫痪半小时，焦头烂额。", effect: { rep: -3, health: -6 } },
+            { desc: "神秘回声：声学设计有问题，说话有回音。", effect: { rep: -3, iq: 1 } },
+            { desc: "保洁表彰：卫生搞得太好了，被评为卫生先进单位。", effect: { rep: 3, mood: 6 } }
+        ]
+    },
+
+    school: {
+        active: [
+            { title: "期末考试", desc: "工作太忙，明天就要期末考了。", choices: [{ txt: "裸考", effect: { iq: -1, rep: -3 }, res: "挂科了，丢人现眼。" }, { txt: "通宵复习", effect: { health: -8, mood: -6 }, res: "考过了，但发际线后移了。" }, { txt: "平时积累", effect: { iq: 2, mood: 5 }, res: "凭借工作经验轻松过关，学霸！" }] },
+            { title: "导师召唤", desc: "导师让你去帮他干私活（整理发票）。", choices: [{ txt: "拒绝", effect: { rep: -3, mood: -4 }, res: "导师以后给你穿小鞋。" }, { txt: "摸鱼应付", effect: { iq: -1, rep: -3 }, res: "被导师骂了一顿。" }, { txt: "积极表现", effect: { health: -5, iq: 2 }, res: "虽然累，但导师答应推荐你读博。" }] },
+            { title: "小组作业", desc: "队友全是摆烂怪，deadline将至。", choices: [{ txt: "一起摆烂", effect: { rep: -3, iq: -1 }, res: "全组不及格。" }, { txt: "独自Carry", effect: { health: -8, mood: -7 }, res: "累吐血，带飞全组，心里不平衡。" }, { txt: "分工施压", effect: { eq: 2, iq: 1 }, res: "发挥领导力逼他们干活，顺利完成。" }] },
+            { title: "昂贵教材", desc: "教授推荐了一套绝版外文教材。", choices: [{ txt: "不买", effect: { iq: -1, rep: -3 }, res: "上课听不懂。" }, { txt: "买原版", effect: { savings: -1000 }, res: "好贵啊，吃土一个月。" }, { txt: "图书馆借", effect: { iq: 1, health: -3 }, res: "跑了三个校区终于借到了，省钱！" }] },
+            { title: "学术会议", desc: "有个高端学术会议，但报名费很贵。", choices: [{ txt: "自费参加", effect: { savings: -1000, health: -4 }, res: "钱包受损，舟车劳顿。" }, { txt: "不去", effect: { iq: -1, rep: -3 }, res: "错过了结识大佬的机会。" }, { txt: "申请公费", effect: { money: -2000, rep: 3 }, res: "成功申请公款出差，还认识了大牛。" }] }
+        ],
+        passive: [
+            { desc: "奖学金：学业优秀，获得一等奖学金！", effect: { savings: 1000, rep: 3 } },
+            { desc: "挂科补考：有一门课挂了，交补考费。", effect: { savings: -500, mood: -6 } },
+            { desc: "图书馆占座：起晚了没位置，站着看书。", effect: { health: -5, iq: 1 } },
+            { desc: "校园卡丢了：补办饭卡，麻烦。", effect: { savings: -500, mood: -4 } },
+            { desc: "听讲座：听了院士的讲座，受益匪浅。", effect: { iq: 2, mood: 5 } }
+        ]
+    }
+};
 
 // ==================== 游戏引擎 ====================
-
-const UTILS = {
-    rand: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
-    randArr: (arr) => arr[Math.floor(Math.random() * arr.length)],
-    clamp: (num, min, max) => Math.min(Math.max(num, min), max),
-    formatMoney: (val) => val >= 10000 ? (val/10000).toFixed(2) + "万" : Math.floor(val) + "元",
-    getStatName: (k) => k==='money'?'经费':(k==='rep'?'声望':(k==='iq'?'智商':(k==='eq'?'情商':(k==='health'?'健康':(k==='mood'?'愉悦':k)))))
-};
-
-const game = {
-    state: null,
-    history: null,
-    isModalOpen: false, // 标记弹窗状态
-
-    startGame() {
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'grid';
-        this.init();
-    },
-
-    init() {
-        const edu = ["本科", "硕士", "博士"][Math.floor(Math.random()*3)];
-        let baseRep = edu === "硕士" ? 5 : (edu === "博士" ? 10 : 0);
-
-        this.state = {
-            player: {
-                name: NAME_DB[Math.floor(Math.random()*NAME_DB.length)],
-                edu: edu,
-                titleIdx: 0,
-                health: 100, mood: 100,
-                iq: Math.floor(Math.random()*40)+10,
-                eq: Math.floor(Math.random()*40)+10,
-                rep: baseRep,
-                money: 130000
-            },
-            turn: { year: 1, quarter: 1 },
-            limits: { leisure: 4 },
-            exhibitions: [],
-            flags: {
-                quartersInTitle: 0,
-                researchApplied: false,
-                researchSuccessCount: 0,
-                hasAppliedExhibitThisQuarter: false,
-                promotedThisYear: false
-            }
-        };
-        
-        this.saveState();
-        this.log("system", `🎉 欢迎入职！这里是您的工位。新的一年，请多关照！`);
-        this.updateUI();
-        this.renderExhibitPanel();
-    },
-
-    saveState() { this.history = JSON.parse(JSON.stringify(this.state)); },
-    undoQuarter() {
-        if (!this.history) return;
-        this.state = JSON.parse(JSON.stringify(this.history));
-        this.log("system", "↺ 时光倒流...回到了季度初，一切重新开始。");
-        this.updateUI();
-        this.renderExhibitPanel();
-    },
-
-    nextQuarter() {
-        this.saveState();
-        this.changeStat('money', 30000);
-        this.log("success", "💰 季度经费已到账 (+30000)，新的预算周期开始了。");
-
-        this.triggerRandomEvent();
-
-        if (this.state.turn.quarter === 4 && this.state.flags.researchApplied) this.settleResearch();
-
-        this.state.exhibitions.forEach(ex => {
-            ex.quartersActive++;
-            if (ex.status === 'waiting') {
-                ex.feedbackTimer--;
-                if (ex.feedbackTimer <= 0) {
-                    ex.status = 'ready_for_feedback';
-                    this.log("success", `📬 [${ex.name}] 的观众反馈报告送到了您的案头，请查阅。`);
-                }
-            }
-        });
-
-        this.state.turn.quarter++;
-        this.state.flags.quartersInTitle++;
-        
-        if (this.state.turn.quarter > 4) {
-            this.state.turn.year++;
-            this.state.turn.quarter = 1;
-            this.state.flags.researchApplied = false;
-            this.state.flags.promotedThisYear = false;
-        }
-
-        if (this.state.turn.year === 4 && this.state.turn.quarter === 1 && this.state.player.titleIdx === 0) {
-            this.endGame("解聘通知", "很遗憾，因入职三年未获晋升，您的聘用合同已终止。");
-            return;
-        }
-
-        this.state.limits.leisure = 4;
-        this.state.flags.hasAppliedExhibitThisQuarter = false;
-
-        this.checkSurvival();
-        this.log("turn", `📅 Y${this.state.turn.year} - Q${this.state.turn.quarter}`);
-        this.updateUI();
-        this.renderExhibitPanel();
-    },
-
-    // 结果弹窗 (通知类，可点击背景关闭)
-    showResult(msg, effects) {
-        let effectText = "";
-        for (let k in effects) {
-            this.changeStat(k, effects[k]);
-            let name = UTILS.getStatName(k);
-            let val = effects[k] > 0 ? `+${effects[k]}` : effects[k];
-            effectText += `\n${name} ${val}`;
-        }
-        // true 表示这是通知类弹窗，允许点击背景关闭
-        this.showModal("事件结果", `${msg}\n----------------${effectText}`, [{txt:"知道了", cb:()=>this.closeModal()}], true);
-        this.updateUI();
-    },
-
-    triggerRandomEvent() {
-        if (Math.random() > 0.4) return;
-        const evt = RANDOM_EVENTS[Math.floor(Math.random()*RANDOM_EVENTS.length)];
-        const choices = evt.choices.map(c => ({
-            txt: c.txt,
-            cb: () => {
-                this.closeModal();
-                c.cb(this);
-            }
-        }));
-        this.showModal(evt.title, evt.desc, choices);
-    },
-
-    actionApplyExhibit() {
-        if (this.state.flags.hasAppliedExhibitThisQuarter) {
-            this.showResult("申请受限", "本季度申请额度已用完，请下个季度再来。");
-            return;
-        }
-        
-        const currentNames = this.state.exhibitions.map(e => e.name);
-        const pool = EX_THEMES.filter(t => !currentNames.includes(t));
-        
-        if (this.state.exhibitions.filter(e=>e.status!=='finished').length >= 2) {
-            this.showResult("任务过载", "您手头已经有两个项目在推进了，请先完成手头工作！");
-            return;
-        }
-
-        const options = [];
-        for(let i=0; i<3 && pool.length>0; i++) {
-            const idx = Math.floor(Math.random()*pool.length);
-            options.push(pool[idx]);
-            pool.splice(idx, 1);
-        }
-
-        const choices = options.map(t => ({
-            txt: t,
-            cb: () => {
-                this.state.exhibitions.push({
-                    id: Date.now(),
-                    name: t,
-                    status: 'active',
-                    tasks: { collect:0, read:0, trip:0, theme:0, items:0, design:0, souvenir:0 },
-                    feedbackTimer: 0,
-                    quartersActive: 0
-                });
-                this.state.flags.hasAppliedExhibitThisQuarter = true;
-                this.log("system", `📝 新项目 [${t}] 已成功立项。`);
-                this.closeModal();
-                this.renderExhibitPanel();
-            }
-        }));
-        this.showModal("立项申请", "请选择本季度重点推进的展览项目：", choices);
-    },
-
-    actionExhibitTask(id, key) {
-        if (this.state.player.health <= 10) {
-            this.showResult("健康预警", "🚑 您的身体状况极差，无法进行高强度工作！请务必先休息。");
-            return;
-        }
-        
-        const ex = this.state.exhibitions.find(e => e.id === id);
-        const task = EX_TASKS[key];
-        
-        if (this.state.player.money < task.cost) {
-            this.showResult("经费不足", `该工作需要 ${UTILS.formatMoney(task.cost)}，当前部门经费不足。`);
-            return;
-        }
-
-        // 获取该展览、该阶段的所有潜在事件
-        let stageEvents = (CURATION_EVENTS[ex.name] && CURATION_EVENTS[ex.name][key]) || null;
-
-        if (stageEvents && stageEvents.length > 0) {
-            // === 新逻辑：随机抽取一个剧情事件 ===
-            const evt = stageEvents[Math.floor(Math.random() * stageEvents.length)];
-            
-            // 兼容新旧两种数据格式
-            let title, desc, choices;
-
-            if (evt.choices) { 
-                // 新格式：包含标题、描述、选项数组
-                title = evt.title;
-                desc = evt.desc; // 这里会显示您写的长描述
-                choices = evt.choices.map(c => ({
-                    txt: c.txt, // 这里会显示您写的选项文本
-                    cb: () => {
-                        // 扣除经费并应用选项效果
-                        this.finishTask(ex, key, task.cost, c.effect, c.res || "事件已处理");
-                    }
-                }));
-            } else {
-                // 旧格式兼容
-                title = `推进：${task.name}`;
-                desc = "在推进过程中，请选择处理方案：";
-                choices = stageEvents.map(e => ({
-                    txt: e.txt,
-                    cb: () => this.finishTask(ex, key, task.cost, e.effect, e.res)
-                }));
-            }
-
-            this.showModal(title, desc, choices);
-
-        } else {
-            // 默认通用保底事件
-            this.showModal(`推进：${task.name}`, `即将消耗经费 ${UTILS.formatMoney(task.cost)}，是否确认执行？`, [{
-                txt: "确认执行",
-                cb: () => this.finishTask(ex, key, task.cost, {health:-5}, "工作已完成")
-            }]);
-        }
-    },
-
-    finishTask(ex, key, cost, effect, resText) {
-        // 扣除经费
-        this.changeStat('money', -cost);
-        
-        // 应用子事件效果 (包含动态健康扣除)
-        if(effect) {
-            for(let k in effect) this.changeStat(k, effect[k]);
-        }
-
-        const progress = Math.floor(Math.random()*51) + 50;
-        ex.tasks[key] = Math.min(100, ex.tasks[key] + progress);
-        
-        this.closeModal();
-        this.showResult(resText, effect);
-        
-        // 周报故事化
-        let story = EX_TASKS[key].story || `完成了${EX_TASKS[key].name}工作。`;
-        this.log("system", `🔨 [${ex.name}] ${story} (进度+${progress}%)`);
-        
-        if (Object.values(ex.tasks).every(v => v >= 100)) {
-            ex.status = 'waiting';
-            ex.feedbackTimer = 1;
-            this.log("success", `🎉 恭喜！[${ex.name}] 的筹备工作已全部完成，等待开展！`);
-        }
-        this.renderExhibitPanel();
-    },
-
-    actionViewFeedback(id) {
-        const ex = this.state.exhibitions.find(e => e.id === id);
-        const isRushJob = ex.quartersActive <= 4;
-        const isBadReview = isRushJob && Math.random() > 0.5;
-        
-        let content = isBadReview ? "【差评反馈】观众反映动线混乱，细节粗糙，看来欲速则不达。" : "【好评反馈】展览广受好评，学术界与公众都给予了高度评价！";
-        let effects = isBadReview ? { rep: -5 } : { rep: 10 };
-
-        this.showModal("观众反馈", content, [{
-            txt: "归档项目",
-            cb: () => {
-                this.closeModal();
-                this.showResult(isBadReview?"声望受损":"声望大幅提升", effects);
-                this.state.exhibitions = this.state.exhibitions.filter(e => e.id !== id);
-                this.renderExhibitPanel();
-            }
-        }]);
-    },
-
-    actionShop(type) {
-        if (type === 'coffee') {
-            if (this.state.player.money < 50) { this.showResult("余额不足", "买不起咖啡了..."); return; }
-            let hCost = Math.floor(Math.random()*3)+3; // 3-5
-            let mAdd = Math.floor(Math.random()*3)+3;
-            this.changeStat('money', -50);
-            this.showResult("喝了一杯特浓咖啡", {health: -hCost, mood: mAdd});
-            this.log("system", "☕ 喝了杯咖啡，虽然心跳加速，但心情变好了。");
-        } else {
-            if (this.state.player.money < 100) { this.showResult("余额不足", "吃不起套餐..."); return; }
-            let hAdd = Math.floor(Math.random()*6)+3; // 3-8
-            let mAdd = Math.floor(Math.random()*6)+3;
-            this.changeStat('money', -100);
-            this.showResult("享用了文创套餐", {health: hAdd, mood: mAdd});
-            this.log("system", "🍱 美食治愈了一切，感觉充满了力量！");
-        }
-    },
-
-    changeStat(key, val) {
-        this.state.player[key] += val;
-        if(['health','mood','iq','eq'].includes(key)) this.state.player[key] = UTILS.clamp(this.state.player[key], 0, 100);
-        if(key === 'money') this.state.player[key] = Math.max(0, this.state.player[key]);
-    },
-
-    updateUI() {
-        const p = this.state.player;
-        document.getElementById('ui-name').innerText = p.name;
-        document.getElementById('ui-edu').innerText = p.edu;
-        document.getElementById('ui-title').innerText = TITLES[p.titleIdx].name;
-        document.getElementById('ui-iq').innerText = p.iq;
-        document.getElementById('ui-eq').innerText = p.eq;
-        document.getElementById('ui-rep').innerText = p.rep;
-        document.getElementById('ui-money').innerText = UTILS.formatMoney(p.money);
-        
-        document.getElementById('txt-health').innerText = p.health;
-        document.getElementById('bar-health').style.width = p.health+"%";
-        document.getElementById('txt-mood').innerText = p.mood;
-        document.getElementById('bar-mood').style.width = p.mood+"%";
-        
-        document.getElementById('limit-leisure').innerText = `${this.state.limits.leisure}/4`;
-        document.getElementById('ui-year').innerText = this.state.turn.year;
-        document.getElementById('ui-quarter').innerText = this.state.turn.quarter;
-
-        document.getElementById('btn-promote').disabled = !(this.state.turn.quarter === 4 && !this.state.flags.promotedThisYear && p.titleIdx < 4);
-        
-        const btnRes = document.getElementById('btn-research');
-        document.getElementById('research-count').innerText = `${this.state.flags.researchSuccessCount}/5`;
-        if (this.state.turn.quarter === 1 && !this.state.flags.researchApplied && this.state.flags.researchSuccessCount < 5) {
-            btnRes.disabled = false;
-            document.getElementById('research-msg').innerText = "窗口期开启";
-            document.getElementById('research-msg').style.color = "var(--success)";
-        } else {
-            btnRes.disabled = true;
-            document.getElementById('research-msg').innerText = this.state.flags.researchApplied ? "等待评审" : "窗口关闭";
-            document.getElementById('research-msg').style.color = "var(--text-sub)";
-        }
-    },
-
-    renderExhibitPanel() {
-        const c = document.getElementById('exhibits-container');
-        c.innerHTML = "";
-        
-        if (this.state.exhibitions.length === 0) {
-            c.innerHTML = `<div style="text-align:center; color:#ccc; padding:20px;">暂无进行中的项目</div>`;
-            return;
-        }
-
-        this.state.exhibitions.forEach(ex => {
-            const div = document.createElement('div');
-            div.className = "exhibit-card " + ex.status;
-            
-            if (ex.status === 'active') {
-                let html = `<div style="font-weight:bold;margin-bottom:10px; color:var(--primary)">${ex.name}</div><div class="task-grid">`;
-                for(let k in EX_TASKS) {
-                    const done = ex.tasks[k] >= 100;
-                    html += `<button class="task-btn ${done?'done':''}" onclick="game.actionExhibitTask(${ex.id},'${k}')" ${done?'disabled':''}><span>${EX_TASKS[k].name}</span>${done?'✔':''}</button>`;
-                }
-                html += `</div>`;
-                div.innerHTML = html;
-            } else if (ex.status === 'waiting') {
-                div.innerHTML = `<div style="font-weight:bold; color:var(--text-main)">${ex.name}</div><div style="color:var(--warning); text-align:center; margin-top:10px;">⏳ 等待反馈报告...</div>`;
-            } else if (ex.status === 'ready_for_feedback') {
-                div.innerHTML = `<div style="font-weight:bold; color:var(--text-main)">${ex.name}</div><button class="primary" style="width:100%; margin-top:10px;" onclick="game.actionViewFeedback(${ex.id})">查看报告</button>`;
-            }
-            c.appendChild(div);
-        });
-    },
-
-    actionLeisure(type) {
-        if(this.state.limits.leisure <= 0) { this.log("danger", "没时间摸鱼了"); return; }
-        this.state.limits.leisure--;
-        
-        if(type==='slack') { this.showResult("闭目养神", {health:5, mood:5}); this.log("system", "😴 闭目养神了一会儿。"); }
-        else if(type==='read') { this.showResult("阅读了一本书", {iq:3, mood:2}); this.log("system", "📚 读了一本好书。"); }
-        else { this.showResult("听到了八卦", {eq:3}); this.log("system", "💬 听到了一些传闻。"); }
-    },
-
-    actionResearch() {
-        this.changeStat('health', -10);
-        this.changeStat('mood', -5);
-        this.state.flags.researchApplied = true;
-        this.log("system", "📝 已提交课题申报材料，希望能中！");
-        this.updateUI();
-    },
-
-    settleResearch() {
-        let rate = 0.3 + (this.state.player.iq / 200);
-        if (Math.random() < rate && this.state.flags.researchSuccessCount < 5) {
-            this.state.flags.researchSuccessCount++;
-            this.showResult("课题获批立项！", { money: 200000, rep: 10 });
-            this.log("success", "🏆 太棒了！申报的课题获批了，经费大幅增加！");
-        } else {
-            this.log("danger", "遗憾，本年度课题申报未通过。");
-        }
-    },
-
-    actionPromote() {
-        const p = this.state.player;
-        const q = this.state.flags.quartersInTitle;
-        let success = false, next = "";
-        
-        if (p.titleIdx === 0 && (q>=4) + (p.iq>=35&&p.eq>=35) + (p.rep>=10) >= 2) { success=true; next="馆员"; }
-        else if (p.titleIdx === 1 && q>=8 && p.iq>=50 && p.eq>=50 && p.rep>=30) { success=true; next="副研究馆员"; }
-        else if (p.titleIdx === 2 && q>=8 && p.iq>=80 && p.eq>=80 && p.rep>=50) { success=true; next="研究馆员"; }
-        
-        this.state.flags.promotedThisYear = true;
-        if (success) {
-            p.titleIdx++;
-            this.state.flags.quartersInTitle = 0;
-            this.showModal("评审通过", `恭喜晋升为 [${next}]！`, [{txt:"确认",cb:()=>this.closeModal()}]);
-        } else {
-            this.showResult("评审未通过", { rep: -1 });
-        }
-        this.updateUI();
-    },
-
-    checkSurvival() {
-        if(this.state.player.health<=0) this.endGame("过劳死", "身体被掏空...");
-        if(this.state.player.mood<=0) this.endGame("抑郁离职", "世界那么大，我想去看看...");
-    },
-
-    log(type, msg) {
-        const box = document.getElementById('log-container');
-        const div = document.createElement('div');
-        div.className = `log-entry log-${type}`;
-        div.innerText = msg;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-    },
-
-    // isNotice: true 表示是通知类弹窗，可点击背景关闭
-    showModal(title, text, choices, isNotice = false) {
-        this.isModalOpen = true;
-        document.getElementById('modal-title').innerText = title;
-        document.getElementById('modal-text').innerText = text;
-        const cBox = document.getElementById('modal-choices');
-        cBox.innerHTML = "";
-        choices.forEach(c => {
-            const btn = document.createElement('button');
-            btn.className = "choice-btn";
-            btn.innerText = c.txt;
-            btn.onclick = c.cb;
-            cBox.appendChild(btn);
-        });
-        const overlay = document.getElementById('modal-overlay');
-        overlay.classList.remove('hidden');
-        
-        // 设置是否允许点击背景关闭
-        if (isNotice) {
-            overlay.setAttribute('onclick', 'game.tryCloseModal(event)');
-        } else {
-            overlay.removeAttribute('onclick');
-        }
-    },
-
-    tryCloseModal(e) {
-        if (e.target.id === 'modal-overlay') {
-            this.closeModal();
-        }
-    },
-
-    closeModal() { 
-        this.isModalOpen = false;
-        document.getElementById('modal-overlay').classList.add('hidden'); 
-    },
-    
-    endGame(t, r) { this.showModal(t, r, [{txt:"重新开始", cb:()=>location.reload()}]); }
-};
-
-function startGame() { game.startGame(); }
-</script>
-</body>
-</html>
