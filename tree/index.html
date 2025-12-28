@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 粒子圣诞树 - 修复版</title>
+    <style>
+        body, html { margin: 0; padding: 0; overflow: hidden; background-color: #050505; font-family: sans-serif; }
+        #root { width: 100vw; height: 100vh; }
+        #canvas-container { width: 100%; height: 100%; display: block; }
+        
+        /* UI Layer */
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+            color: white;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            min-width: 200px;
+        }
+        
+        h1 { margin: 0 0 10px 0; font-size: 16px; color: #4ade80; text-transform: uppercase; letter-spacing: 1px; }
+        .status-row { display: flex; align-items: center; margin-bottom: 6px; font-size: 12px; }
+        .indicator { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background: #555; transition: background 0.3s; }
+        .indicator.active { background: #4ade80; box-shadow: 0 0 5px #4ade80; }
+        .indicator.warn { background: #fbbf24; }
+        .indicator.error { background: #ef4444; }
+
+        /* Video Preview */
+        #video-preview {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 160px; /* Small preview */
+            height: 120px;
+            background: #000;
+            border: 1px solid #333;
+            transform: scaleX(-1);
+            opacity: 0.8;
+            border-radius: 6px;
+            z-index: 5;
+            display: none; /* Hidden until active */
+        }
+
+        #error-log {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(200, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            font-size: 12px;
+            display: none;
+            z-index: 999;
+        }
+        
+        .loading-text {
+            color: #aaa;
+            font-size: 11px;
+            margin-top: 5px;
+            font-style: italic;
+        }
+    </style>
+
+    <!-- Import Map for Modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "react": "https://esm.sh/react@18.2.0",
+                "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+                "three": "https://esm.sh/three@0.160.0",
+                "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <!-- Load MediaPipe globally (non-blocking) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous" defer></script>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="error-log"></div>
+
+    <script type="module">
+        import React, { useEffect, useRef, useState } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Error Handling ---
+        window.onerror = function(msg, url, line) {
+            const errDiv = document.getElementById('error-log');
+            errDiv.style.display = 'block';
+            errDiv.innerHTML += `Error: ${msg} <br/>`;
+            return false;
+        };
+
+        // --- Shaders ---
+        const vertexShader = `
+            uniform float uTime;
+            uniform float uProgress;
+            
+            attribute vec3 aTargetPos;
+            attribute vec3 aRandomPos;
+            attribute vec3 aColor;
+            attribute float aSize;
+            
+            varying vec3 vColor;
+            
+            // Simple noise function
+            float hash(float n) { return fract(sin(n) * 1e4); }
+            float noise(vec3 x) {
+                const vec3 step = vec3(110, 241, 171);
+                vec3 i = floor(x);
+                vec3 f = fract(x);
+                float n = dot(i, step);
+                vec3 u = f * f * (3.0 - 2.0 * f);
+                return mix(mix(mix( hash(n + dot(step, vec3(0, 0, 0))), hash(n + dot(step, vec3(1, 0, 0))), u.x),
+                            mix( hash(n + dot(step, vec3(0, 1, 0))), hash(n + dot(step, vec3(1, 1, 0))), u.x), u.y),
+                            mix(mix( hash(n + dot(step, vec3(0, 0, 1))), hash(n + dot(step, vec3(1, 0, 1))), u.x),
+                            mix( hash(n + dot(step, vec3(0, 1, 1))), hash(n + dot(step, vec3(1, 1, 1))), u.x), u.y), u.z);
+            }
+
+            void main() {
+                vColor = aColor;
+                
+                // Noise movement when scattered
+                float n = noise(aRandomPos * 0.05 + uTime * 0.5);
+                vec3 noiseOffset = vec3(
+                    sin(uTime + aRandomPos.y * 0.1) * 5.0,
+                    cos(uTime + aRandomPos.x * 0.1) * 5.0,
+                    sin(uTime + aRandomPos.z * 0.1) * 5.0
+                ) * (1.0 - uProgress);
+
+                vec3 pos = mix(aRandomPos + noiseOffset, aTargetPos, uProgress);
+                
+                // Breathing effect when formed
+                if(uProgress > 0.8) {
+                    pos += normalize(pos) * sin(uTime * 2.0 + pos.y * 0.1) * 0.5 * uProgress;
+                }
+
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                gl_PointSize = aSize * (300.0 / -mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+
+        const fragmentShader = `
+            varying vec3 vColor;
+            void main() {
+                float r = distance(gl_PointCoord, vec2(0.5));
+                if (r > 0.5) discard;
+                float glow = 1.0 - (r * 2.0);
+                glow = pow(glow, 1.5);
+                gl_FragColor = vec4(vColor, glow);
+            }
+        `;
+
+        // --- App Component ---
+        function App() {
+            const containerRef = useRef(null);
+            const videoRef = useRef(null);
+            
+            // Interaction State
+            const isMouseDown = useRef(false);
+            const isHandFist = useRef(false);
+            
+            // UI State
+            const [status, setStatus] = useState({
+                fps: 0,
+                camera: 'init', // init, active, error
+                handTracking: 'waiting', // waiting, active
+                mode: 'Mouse'
+            });
+
+            // Three.js Refs (to avoid re-renders)
+            const sceneRef = useRef(null);
+            const materialRef = useRef(null);
+            const starRef = useRef(null);
+            const ornamentMeshRef = useRef(null);
+            const progressRef = useRef(0);
+
+            // 1. Initialize Three.js (Must run immediately)
+            useEffect(() => {
+                if (!containerRef.current) return;
+
+                console.log("Initializing Three.js...");
+
+                // Setup
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(0, 30, 70);
+                
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                containerRef.current.appendChild(renderer.domElement);
+
+                const controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.autoRotate = true;
+                controls.autoRotateSpeed = 0.5;
+
+                // --- Create Particles ---
+                const count = 45000;
+                const geo = new THREE.BufferGeometry();
+                const pos = [], target = [], rnd = [], col = [], sizes = [];
+                
+                const cGreen = new THREE.Color(0x2d6e32);
+                const cLight = new THREE.Color(0x4ade80);
+                const cGold = new THREE.Color(0xffaa00);
+
+                for (let i = 0; i < count; i++) {
+                    // Random / Scatter pos
+                    const rx = (Math.random() - 0.5) * 200;
+                    const ry = (Math.random() - 0.5) * 200;
+                    const rz = (Math.random() - 0.5) * 200;
+                    rnd.push(rx, ry, rz);
+                    pos.push(rx, ry, rz); // Initial pos
+
+                    // Target Tree pos
+                    let tx, ty, tz, color, size;
+                    
+                    if (i < 38000) { // Leaves
+                        const h = Math.random() * 60; // height 0-60
+                        const rMax = 25 * (1.0 - h / 60);
+                        const r = Math.random() * rMax;
+                        const theta = Math.random() * Math.PI * 2;
+                        
+                        ty = h - 30;
+                        tx = r * Math.cos(theta);
+                        tz = r * Math.sin(theta);
+                        
+                        const mix = Math.random();
+                        color = mix > 0.7 ? cLight : cGreen;
+                        size = Math.random() * 1.5 + 0.5;
+                    } else { // Ribbon
+                        const t = (i - 38000) / 7000;
+                        const h = t * 60;
+                        const r = 26 * (1.0 - h / 60);
+                        const theta = h * 0.5; // Spiral
+                        
+                        ty = h - 30;
+                        tx = r * Math.cos(theta);
+                        tz = r * Math.sin(theta);
+                        
+                        color = cGold;
+                        size = 2.5;
+                    }
+
+                    target.push(tx, ty, tz);
+                    col.push(color.r, color.g, color.b);
+                    sizes.push(size);
+                }
+
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+                geo.setAttribute('aTargetPos', new THREE.Float32BufferAttribute(target, 3));
+                geo.setAttribute('aRandomPos', new THREE.Float32BufferAttribute(rnd, 3));
+                geo.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
+                geo.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
+
+                const material = new THREE.ShaderMaterial({
+                    vertexShader,
+                    fragmentShader,
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uProgress: { value: 0 }
+                    },
+                    transparent: true,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending
+                });
+                materialRef.current = material;
+                
+                const points = new THREE.Points(geo, material);
+                scene.add(points);
+
+                // --- Solid Objects ---
+                // Star
+                const starShape = new THREE.Shape();
+                const starPts = 5;
+                for(let i=0; i<starPts*2; i++){
+                    const l = i%2==0 ? 3 : 1.2;
+                    const a = i/starPts * Math.PI;
+                    starShape.lineTo(Math.cos(a)*l, Math.sin(a)*l);
+                }
+                const starGeo = new THREE.ExtrudeGeometry(starShape, { depth: 0.5, bevelEnabled: false });
+                const starMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                const star = new THREE.Mesh(starGeo, starMat);
+                star.position.y = 32;
+                star.scale.set(0,0,0);
+                starRef.current = star;
+                scene.add(star);
+
+                // Ornaments
+                const orbGeo = new THREE.SphereGeometry(1, 16, 16);
+                const orbMat = new THREE.MeshBasicMaterial({ color: 0xff3333 });
+                const orbMesh = new THREE.InstancedMesh(orbGeo, orbMat, 80);
+                const dummy = new THREE.Object3D();
+                const orbData = [];
+                for(let i=0; i<80; i++){
+                    const h = Math.random() * 55;
+                    const r = 22 * (1.0 - h/60);
+                    const angle = Math.random() * Math.PI * 2;
+                    const x = Math.cos(angle)*r;
+                    const z = Math.sin(angle)*r;
+                    const y = h - 30;
+                    orbData.push({ x, y, z, phase: Math.random()*10 });
+                    dummy.position.set(x,y,z);
+                    dummy.updateMatrix();
+                    orbMesh.setMatrixAt(i, dummy.matrix);
+                }
+                orbMesh.userData = { data: orbData };
+                ornamentMeshRef.current = orbMesh;
+                scene.add(orbMesh);
+
+                // --- Animation Loop ---
+                let frameId;
+                const clock = new THREE.Clock();
+                
+                const animate = () => {
+                    frameId = requestAnimationFrame(animate);
+                    const time = clock.getElapsedTime();
+                    
+                    // Logic: Gather if Mouse Down OR Fist Detected
+                    const targetP = (isMouseDown.current || isHandFist.current) ? 1.0 : 0.0;
+                    // Lerp progress
+                    progressRef.current += (targetP - progressRef.current) * 0.03;
+
+                    // Update Uniforms
+                    if (materialRef.current) {
+                        materialRef.current.uniforms.uTime.value = time;
+                        materialRef.current.uniforms.uProgress.value = progressRef.current;
+                    }
+
+                    // Update Star
+                    if (starRef.current) {
+                        starRef.current.rotation.y = time;
+                        const s = progressRef.current > 0.5 ? (progressRef.current - 0.5) * 2 : 0;
+                        starRef.current.scale.set(s,s,s);
+                    }
+
+                    // Update Ornaments
+                    if (ornamentMeshRef.current) {
+                        const data = ornamentMeshRef.current.userData.data;
+                        const count = ornamentMeshRef.current.count;
+                        const p = progressRef.current;
+                        
+                        // Only update if visible to save perf
+                        if (p > 0.1) {
+                            for(let i=0; i<count; i++){
+                                const d = data[i];
+                                const breathe = 1 + Math.sin(time*3 + d.phase)*0.2;
+                                
+                                // Explode effect inverse to progress
+                                const exp = (1.0 - p) * 50.0;
+                                const lx = d.x + Math.sin(time+i)*exp;
+                                const ly = d.y + Math.cos(time+i)*exp;
+                                const lz = d.z + Math.sin(time+i)*exp;
+
+                                dummy.position.set(lx, ly, lz);
+                                dummy.scale.set(p*breathe, p*breathe, p*breathe);
+                                dummy.updateMatrix();
+                                ornamentMeshRef.current.setMatrixAt(i, dummy.matrix);
+                            }
+                            ornamentMeshRef.current.instanceMatrix.needsUpdate = true;
+                            ornamentMeshRef.current.visible = true;
+                        } else {
+                            ornamentMeshRef.current.visible = false;
+                        }
+                    }
+
+                    controls.update();
+                    renderer.render(scene, camera);
+                };
+                
+                animate();
+
+                // Cleanup
+                const handleResize = () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                };
+                window.addEventListener('resize', handleResize);
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    cancelAnimationFrame(frameId);
+                    if(containerRef.current) containerRef.current.innerHTML = '';
+                    renderer.dispose();
+                };
+            }, []); // Run once on mount
+
+            // 2. Interaction Handlers (Mouse)
+            useEffect(() => {
+                const onDown = () => { isMouseDown.current = true; setStatus(s => ({...s, mode: 'Mouse Active'})); };
+                const onUp = () => { isMouseDown.current = false; setStatus(s => ({...s, mode: 'Mouse Idle'})); };
+                
+                window.addEventListener('mousedown', onDown);
+                window.addEventListener('mouseup', onUp);
+                window.addEventListener('touchstart', onDown);
+                window.addEventListener('touchend', onUp);
+                
+                return () => {
+                    window.removeEventListener('mousedown', onDown);
+                    window.removeEventListener('mouseup', onUp);
+                    window.removeEventListener('touchstart', onDown);
+                    window.removeEventListener('touchend', onUp);
+                };
+            }, []);
+
+            // 3. MediaPipe Loader (Lazy Load)
+            useEffect(() => {
+                let cameraObj = null;
+                let handsObj = null;
+
+                const initAI = async () => {
+                    // Wait for global scripts
+                    let attempts = 0;
+                    while (!window.Hands || !window.Camera) {
+                        if (attempts > 20) { // 10 seconds timeout
+                            setStatus(s => ({...s, camera: 'error'}));
+                            return; 
+                        }
+                        await new Promise(r => setTimeout(r, 500));
+                        attempts++;
+                    }
+
+                    try {
+                        handsObj = new window.Hands({locateFile: (file) => {
+                            return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                        }});
+                        
+                        handsObj.setOptions({
+                            maxNumHands: 1,
+                            modelComplexity: 1,
+                            minDetectionConfidence: 0.5,
+                            minTrackingConfidence: 0.5
+                        });
+                        
+                        handsObj.onResults((results) => {
+                            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                                setStatus(s => ({...s, handTracking: 'active'}));
+                                
+                                // Simple Fist Detection
+                                const lm = results.multiHandLandmarks[0];
+                                const wrist = lm[0];
+                                const tips = [lm[8], lm[12], lm[16], lm[20]]; // finger tips
+                                
+                                // Check if tips are close to wrist
+                                let folded = 0;
+                                tips.forEach(t => {
+                                    const d = Math.sqrt(Math.pow(t.x-wrist.x, 2) + Math.pow(t.y-wrist.y, 2));
+                                    if (d < 0.15) folded++; // Threshold for normalized coords
+                                });
+                                
+                                const isFist = folded >= 3;
+                                isHandFist.current = isFist;
+                                setStatus(s => ({
+                                    ...s, 
+                                    mode: isFist ? 'Fist Detected (Gather)' : 'Palm Detected (Scatter)'
+                                }));
+                            } else {
+                                setStatus(s => ({...s, handTracking: 'waiting', mode: 'Camera Idle'}));
+                                isHandFist.current = false;
+                            }
+                        });
+
+                        if (videoRef.current) {
+                            cameraObj = new window.Camera(videoRef.current, {
+                                onFrame: async () => {
+                                    if(handsObj) await handsObj.send({image: videoRef.current});
+                                },
+                                width: 320,
+                                height: 240
+                            });
+                            await cameraObj.start();
+                            setStatus(s => ({...s, camera: 'active'}));
+                            
+                            // Show video preview only when active
+                            videoRef.current.style.display = 'block';
+                        }
+
+                    } catch (e) {
+                        console.error("AI Init Error", e);
+                        setStatus(s => ({...s, camera: 'error'}));
+                    }
+                };
+
+                initAI();
+
+                return () => {
+                    if(cameraObj) cameraObj.stop();
+                    if(handsObj) handsObj.close();
+                };
+            }, []);
+
+            return React.createElement('div', { style: {position: 'relative', width: '100%', height: '100%'} },
+                React.createElement('div', { id: 'canvas-container', ref: containerRef }),
+                
+                // UI Overlay
+                React.createElement('div', { id: 'ui-layer' },
+                    React.createElement('h1', null, "3D Particle Tree"),
+                    
+                    React.createElement('div', { className: 'status-row' },
+                        React.createElement('div', { className: `indicator ${status.camera === 'active' ? 'active' : status.camera === 'error' ? 'error' : 'warn'}` }),
+                        `摄像头: ${status.camera === 'active' ? '运行中' : status.camera === 'error' ? '加载失败' : '初始化...'}`
+                    ),
+                    
+                    React.createElement('div', { className: 'status-row' },
+                        React.createElement('div', { className: `indicator ${status.handTracking === 'active' ? 'active' : 'warn'}` }),
+                        `手势识别: ${status.handTracking === 'active' ? '已检测' : '等待手势'}`
+                    ),
+
+                    React.createElement('div', { className: 'status-row', style: {marginTop: '10px', fontWeight: 'bold'} },
+                        `当前交互: ${status.mode}`
+                    ),
+                    
+                    status.camera !== 'active' && React.createElement('div', { className: 'loading-text' },
+                        "若摄像头加载慢，可直接按住鼠标左键操作。"
+                    )
+                ),
+                
+                // Video Element (Hidden logic handle by css)
+                React.createElement('video', { ref: videoRef, id: 'video-preview', playsInline: true })
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>
